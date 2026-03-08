@@ -64,6 +64,9 @@ export interface Score {
         type: string;
         summary: string;
       }[];
+      linescores?: {
+        value: number;
+      }[];
     }[];
   }[];
 }
@@ -142,33 +145,45 @@ export const getNews = async (sport: string, league: string): Promise<NewsArticl
   }
 };
 
-export const getStandings = async (sport: string, league: string): Promise<Standing[]> => {
+export interface StandingsGroup {
+  name: string;
+  entries: Standing[];
+}
+
+export const getStandings = async (sport: string, league: string): Promise<StandingsGroup[]> => {
   try {
-    // Note: Standings endpoint structure varies slightly by sport, but v2 is generally consistent for major US sports.
-    // For NBA/NFL/MLB/NHL, this usually works.
     const response = await fetch(`https://site.api.espn.com/apis/v2/sports/${sport}/${league}/standings`); 
     if (!response.ok) throw new Error("Failed to fetch standings");
     const data = await response.json();
     
-    // Flatten the structure a bit for easier consumption
-    // The API returns children (divisions/conferences) -> standings -> entries
-    // We'll try to extract all entries.
-    const entries: Standing[] = [];
+    const groups: StandingsGroup[] = [];
     
-    const traverse = (node: any) => {
-      if (node.standings && node.standings.entries) {
-        entries.push(...node.standings.entries);
+    const processNode = (node: any, parentName?: string) => {
+      // If this node has standings entries, it's a leaf group (like a Division)
+      if (node.standings && node.standings.entries && node.standings.entries.length > 0) {
+        groups.push({
+          name: node.name || parentName || "Standings",
+          entries: node.standings.entries
+        });
       }
+      
+      // If it has children, traverse them
       if (node.children) {
-        node.children.forEach(traverse);
+        node.children.forEach((child: any) => processNode(child, node.name));
       }
     };
     
     if (data.children) {
-      data.children.forEach(traverse);
+      data.children.forEach((child: any) => processNode(child));
+    } else if (data.standings && data.standings.entries) {
+      // Handle case where there are no children (e.g. some small leagues)
+      groups.push({
+        name: "Standings",
+        entries: data.standings.entries
+      });
     }
     
-    return entries;
+    return groups;
   } catch (error) {
     console.error("Error fetching standings:", error);
     return [];

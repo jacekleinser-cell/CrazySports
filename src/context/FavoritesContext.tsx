@@ -26,20 +26,38 @@ interface FavoritesContextType {
   addFavoritePlayer: (player: FavoritePlayer) => void;
   removeFavoritePlayer: (playerId: string) => void;
   isFavoritePlayer: (playerId: string) => boolean;
+  clearFavorites: () => void;
 }
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
 
 export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
   const [favorites, setFavorites] = useState<FavoriteTeam[]>(() => {
+    // Force clear for v3 migration to ensure no defaults
+    const hasMigrated = localStorage.getItem('favorites_migrated_v3');
+    if (!hasMigrated) return [];
+    
     const saved = localStorage.getItem('favorites');
     return saved ? JSON.parse(saved) : [];
   });
 
   const [favoritePlayers, setFavoritePlayers] = useState<FavoritePlayer[]>(() => {
+    // Force clear for v3 migration
+    const hasMigrated = localStorage.getItem('favorites_migrated_v3');
+    if (!hasMigrated) return [];
+
     const saved = localStorage.getItem('favoritePlayers');
     return saved ? JSON.parse(saved) : [];
   });
+
+  useEffect(() => {
+    // Set migration flag after mount
+    if (!localStorage.getItem('favorites_migrated_v3')) {
+      localStorage.setItem('favorites_migrated_v3', 'true');
+      setFavorites([]);
+      setFavoritePlayers([]);
+    }
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('favorites', JSON.stringify(favorites));
@@ -50,22 +68,26 @@ export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
   }, [favoritePlayers]);
 
   const addFavorite = (team: Omit<FavoriteTeam, 'notify'>) => {
+    if (!team || !team.id) return;
     if (!favorites.some(f => f.id === team.id)) {
       setFavorites(prev => [...prev, { ...team, notify: true }]);
     }
   };
 
   const removeFavorite = (teamId: string) => {
+    if (!teamId) return;
     setFavorites(prev => prev.filter(f => f.id !== teamId));
   };
 
   const toggleFavoriteNotification = (teamId: string) => {
+    if (!teamId) return;
     setFavorites(prev => prev.map(f => 
       f.id === teamId ? { ...f, notify: !f.notify } : f
     ));
   };
 
   const isFavorite = (teamId: string) => {
+    if (!teamId) return false;
     return favorites.some(f => f.id === teamId);
   };
 
@@ -83,6 +105,11 @@ export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
     return favoritePlayers.some(p => p.id === playerId);
   };
 
+  const clearFavorites = () => {
+    setFavorites([]);
+    setFavoritePlayers([]);
+  };
+
   return (
     <FavoritesContext.Provider value={{
       favorites,
@@ -93,7 +120,8 @@ export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
       isFavorite,
       addFavoritePlayer,
       removeFavoritePlayer,
-      isFavoritePlayer
+      isFavoritePlayer,
+      clearFavorites
     }}>
       {children}
     </FavoritesContext.Provider>

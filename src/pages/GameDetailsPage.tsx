@@ -44,7 +44,7 @@ export const GameDetailsPage = () => {
 
   const isMLB = league === 'mlb';
   const competition = game.header.competitions[0];
-  const situation = game.situation || {};
+  const rawSituation = game.situation || competition.situation || {};
   const boxscore = game.boxscore || {};
   const plays = [...(game.plays || [])].reverse();
   
@@ -55,11 +55,109 @@ export const GameDetailsPage = () => {
   const homeTeam = boxscore.teams?.find((t: any) => t.team.id === homeCompetitor?.id)?.team || homeCompetitor?.team;
   const awayTeam = boxscore.teams?.find((t: any) => t.team.id === awayCompetitor?.id)?.team || awayCompetitor?.team;
 
+  const enrichPlayer = (player: any) => {
+    if (!player) return null;
+    const id = player.id || player.playerId;
+    if (!id) return player;
+
+    if (boxscore.players) {
+      for (const teamPlayers of boxscore.players) {
+        for (const statGroup of teamPlayers.statistics) {
+           const found = statGroup.athletes?.find((a: any) => a.athlete.id === id);
+           if (found) {
+             return { 
+               ...player, 
+               ...found.athlete, 
+               team: found.athlete.team || teamPlayers.team,
+               position: found.athlete.position || player.position
+             };
+           }
+        }
+      }
+    }
+    return player;
+  };
+
+  let currentBatter = rawSituation.batter?.athlete || rawSituation.batter || rawSituation.dueUp?.[0];
+  let currentPitcher = rawSituation.pitcher?.athlete || rawSituation.pitcher;
+
+  // Fallback: If no batter in situation, try to infer from last play
+  if (!currentBatter && plays.length > 0) {
+    const lastPlay = plays[0]; // plays are reversed, so 0 is latest
+    if (lastPlay.participants) {
+      const p = lastPlay.participants[0]?.athlete;
+      if (p) currentBatter = p;
+    }
+  }
+
+  const situation = {
+    ...rawSituation,
+    batter: enrichPlayer(currentBatter),
+    pitcher: enrichPlayer(currentPitcher)
+  };
+
   const getPlayerImage = (athlete: any) => {
     if (!athlete) return null;
     if (athlete.headshot?.href) return athlete.headshot.href;
     if (athlete.id) return `https://a.espncdn.com/combiner/i?img=/i/headshots/${league}/players/full/${athlete.id}.png&w=350&h=254`;
     return null;
+  };
+
+  const findPlayerStats = (athleteId: string, type: 'batting' | 'pitching') => {
+    if (!boxscore.players || !athleteId) return null;
+    
+    for (const team of boxscore.players) {
+      for (const statGroup of team.statistics) {
+        // Check if this is the right category (batting vs pitching)
+        // Note: API sometimes uses "batting" or "pitching" as name/type
+        if (statGroup.name !== type && statGroup.type !== type) continue;
+        
+        const athlete = statGroup.athletes?.find((a: any) => a.athlete.id === athleteId);
+        if (athlete) {
+           // Return formatted stats
+           // For batting: usually AVG (index varies), or summary like "1-3, HR"
+           // Let's try to construct a summary or return the raw stats to pick from
+           return {
+             stats: athlete.stats,
+             labels: statGroup.labels,
+             summary: athlete.stats?.join('/') // Temporary fallback
+           };
+        }
+      }
+    }
+    return null;
+  };
+
+  const getBatterStats = (athleteId: string) => {
+    const data = findPlayerStats(athleteId, 'batting');
+    if (!data) return "Waiting...";
+    // Try to find AVG, HR, RBI
+    const avgIndex = data.labels?.indexOf('AVG');
+    const hrIndex = data.labels?.indexOf('HR');
+    const rbiIndex = data.labels?.indexOf('RBI');
+    
+    const parts = [];
+    if (avgIndex >= 0) parts.push(`AVG ${data.stats[avgIndex]}`);
+    if (hrIndex >= 0) parts.push(`${data.stats[hrIndex]} HR`);
+    if (rbiIndex >= 0) parts.push(`${data.stats[rbiIndex]} RBI`);
+    
+    return parts.join(' • ') || "Stats loading...";
+  };
+
+  const getPitcherStats = (athleteId: string) => {
+    const data = findPlayerStats(athleteId, 'pitching');
+    if (!data) return "Waiting...";
+    // Try to find IP, ERA, K
+    const ipIndex = data.labels?.indexOf('IP');
+    const eraIndex = data.labels?.indexOf('ERA');
+    const kIndex = data.labels?.indexOf('K');
+    
+    const parts = [];
+    if (ipIndex >= 0) parts.push(`${data.stats[ipIndex]} IP`);
+    if (eraIndex >= 0) parts.push(`${data.stats[eraIndex]} ERA`);
+    if (kIndex >= 0) parts.push(`${data.stats[kIndex]} K`);
+    
+    return parts.join(' • ') || "Stats loading...";
   };
 
   const handlePlayerClick = (athlete: any) => {
@@ -69,8 +167,12 @@ export const GameDetailsPage = () => {
     if (boxscore.players) {
        // Search in both teams
        boxscore.players.forEach((teamPlayers: any) => {
-         const found = teamPlayers.statistics.find((p: any) => p.athlete?.id === athlete.id);
-         if (found) stats = found;
+         teamPlayers.statistics.forEach((statGroup: any) => {
+            const found = statGroup.athletes?.find((p: any) => p.athlete?.id === athlete.id);
+            if (found) {
+              stats = { stats: found.stats, labels: statGroup.labels };
+            }
+         });
        });
     }
     setSelectedPlayer({ ...athlete, stats });
@@ -98,6 +200,7 @@ export const GameDetailsPage = () => {
         isOpen={showBoxScore} 
         onClose={() => setShowBoxScore(false)} 
         boxscore={boxscore} 
+        league={league}
       />
 
       {/* Player Stats Modal */}
@@ -220,6 +323,49 @@ export const GameDetailsPage = () => {
             />
           </div>
         </div>
+
+        {/* Line Score (MLB) */}
+        {isMLB && homeCompetitor.linescores && (
+          <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700">
+            <div className="overflow-x-auto">
+              <table className="w-full text-center text-sm">
+                <thead>
+                  <tr className="text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
+                    <th className="text-left font-bold pb-3 pl-2">Team</th>
+                    {homeCompetitor.linescores.map((_: any, i: number) => (
+                      <th key={i} className="font-medium pb-3 w-10">{i + 1}</th>
+                    ))}
+                    <th className="font-bold text-slate-900 dark:text-white pb-3 w-12 border-l border-slate-100 dark:border-slate-700 pl-2">R</th>
+                    <th className="font-bold text-slate-900 dark:text-white pb-3 w-12">H</th>
+                    <th className="font-bold text-slate-900 dark:text-white pb-3 w-12">E</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Away */}
+                  <tr>
+                    <td className="text-left font-bold text-slate-900 dark:text-white py-3 pl-2">{awayTeam?.abbreviation}</td>
+                    {awayCompetitor.linescores?.map((score: any, i: number) => (
+                      <td key={i} className="text-slate-600 dark:text-slate-300 py-3 font-mono">{score.displayValue}</td>
+                    ))}
+                    <td className="font-bold text-slate-900 dark:text-white py-3 border-l border-slate-100 dark:border-slate-700 pl-2 font-mono text-base">{awayCompetitor.score}</td>
+                    <td className="text-slate-600 dark:text-slate-300 py-3 font-mono">{awayCompetitor.hits || boxscore.teams?.find((t: any) => t.team.id === awayCompetitor.id)?.statistics?.find((s: any) => s.name === 'hits')?.displayValue || 0}</td>
+                    <td className="text-slate-600 dark:text-slate-300 py-3 font-mono">{awayCompetitor.errors || boxscore.teams?.find((t: any) => t.team.id === awayCompetitor.id)?.statistics?.find((s: any) => s.name === 'errors')?.displayValue || 0}</td>
+                  </tr>
+                  {/* Home */}
+                  <tr>
+                    <td className="text-left font-bold text-slate-900 dark:text-white py-3 pl-2">{homeTeam?.abbreviation}</td>
+                    {homeCompetitor.linescores?.map((score: any, i: number) => (
+                      <td key={i} className="text-slate-600 dark:text-slate-300 py-3 font-mono">{score.displayValue}</td>
+                    ))}
+                    <td className="font-bold text-slate-900 dark:text-white py-3 border-l border-slate-100 dark:border-slate-700 pl-2 font-mono text-base">{homeCompetitor.score}</td>
+                    <td className="text-slate-600 dark:text-slate-300 py-3 font-mono">{homeCompetitor.hits || boxscore.teams?.find((t: any) => t.team.id === homeCompetitor.id)?.statistics?.find((s: any) => s.name === 'hits')?.displayValue || 0}</td>
+                    <td className="text-slate-600 dark:text-slate-300 py-3 font-mono">{homeCompetitor.errors || boxscore.teams?.find((t: any) => t.team.id === homeCompetitor.id)?.statistics?.find((s: any) => s.name === 'errors')?.displayValue || 0}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -231,32 +377,34 @@ export const GameDetailsPage = () => {
               <h3 className="font-bold text-lg mb-6 text-slate-900 dark:text-white">Live Field</h3>
               <div className="flex flex-col md:flex-row items-center justify-center gap-8">
                 {/* Field (Left) */}
-                <div className="w-48 h-48 shrink-0">
+                <div className="w-48 shrink-0 flex flex-col items-center gap-4">
                   <BaseballField situation={situation} />
                   
-                  {/* Balls/Strikes/Outs - Moved below field */}
-                  <div className="mt-4 flex justify-between items-center px-2">
+                  {/* Balls/Strikes/Outs - Redesigned */}
+                  <div className="w-full bg-slate-900 text-white rounded-lg p-3 shadow-lg flex justify-between items-center px-4">
                     <div className="flex flex-col items-center">
-                       <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">Balls</span>
-                       <div className="flex gap-1">
+                       <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Balls</div>
+                       <div className="flex gap-1 mt-1">
                          {[1, 2, 3, 4].map(i => (
-                           <div key={i} className={cn("w-2 h-2 rounded-full transition-colors", (situation.balls || 0) >= i ? "bg-emerald-500" : "bg-slate-200 dark:bg-slate-700")} />
+                           <div key={i} className={cn("w-2.5 h-2.5 rounded-full transition-all duration-300", (situation.balls || 0) >= i ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" : "bg-slate-700")} />
                          ))}
                        </div>
                     </div>
+                    <div className="w-px h-8 bg-slate-700" />
                     <div className="flex flex-col items-center">
-                       <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">Strikes</span>
-                       <div className="flex gap-1">
+                       <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Strikes</div>
+                       <div className="flex gap-1 mt-1">
                          {[1, 2, 3].map(i => (
-                           <div key={i} className={cn("w-2 h-2 rounded-full transition-colors", (situation.strikes || 0) >= i ? "bg-red-500" : "bg-slate-200 dark:bg-slate-700")} />
+                           <div key={i} className={cn("w-2.5 h-2.5 rounded-full transition-all duration-300", (situation.strikes || 0) >= i ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]" : "bg-slate-700")} />
                          ))}
                        </div>
                     </div>
+                    <div className="w-px h-8 bg-slate-700" />
                     <div className="flex flex-col items-center">
-                       <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">Outs</span>
-                       <div className="flex gap-1">
+                       <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Outs</div>
+                       <div className="flex gap-1 mt-1">
                          {[1, 2, 3].map(i => (
-                           <div key={i} className={cn("w-2 h-2 rounded-full transition-colors", (situation.outs || 0) >= i ? "bg-red-500" : "bg-slate-200 dark:bg-slate-700")} />
+                           <div key={i} className={cn("w-2.5 h-2.5 rounded-full transition-all duration-300", (situation.outs || 0) >= i ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]" : "bg-slate-700")} />
                          ))}
                        </div>
                     </div>
@@ -290,9 +438,18 @@ export const GameDetailsPage = () => {
                       </div>
                       <div className="min-w-0">
                         <div className="text-xs text-emerald-600 dark:text-emerald-400 uppercase tracking-wide font-bold mb-0.5">At Bat</div>
-                        <div className="font-bold text-lg text-slate-900 dark:text-white truncate">{situation.batter?.athlete?.displayName || situation.batter?.displayName || situation.batter?.fullName || "Waiting..."}</div>
+                        <div className="font-bold text-lg text-slate-900 dark:text-white truncate">
+                          {situation.batter?.athlete?.displayName || situation.batter?.displayName || situation.batter?.fullName || (
+                            <span className="text-slate-400 italic font-normal text-base">
+                              {competition.status?.type?.description || "Between Innings"}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-sm text-slate-500 dark:text-slate-400">
                           {(situation.batter?.athlete || situation.batter)?.position?.abbreviation} • {(situation.batter?.athlete || situation.batter)?.team?.abbreviation}
+                        </div>
+                        <div className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300 mt-1">
+                          {situation.batter ? getBatterStats((situation.batter.athlete || situation.batter).id) : '--'}
                         </div>
                       </div>
                     </div>
@@ -322,11 +479,56 @@ export const GameDetailsPage = () => {
                       </div>
                       <div className="min-w-0">
                         <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-bold mb-0.5">Pitching</div>
-                        <div className="font-bold text-lg text-slate-900 dark:text-white truncate">{situation.pitcher?.athlete?.displayName || situation.pitcher?.displayName || situation.pitcher?.fullName || "Waiting..."}</div>
-                        <div className="text-sm text-slate-500 dark:text-slate-400">ERA: {(situation.pitcher?.athlete || situation.pitcher)?.stats?.find((s: any) => s.name === 'ERA')?.value || '--'}</div>
+                        <div className="font-bold text-lg text-slate-900 dark:text-white truncate">
+                          {situation.pitcher?.athlete?.displayName || situation.pitcher?.displayName || situation.pitcher?.fullName || (
+                             <span className="text-slate-400 italic font-normal text-base">
+                               {competition.status?.type?.description || "Between Innings"}
+                             </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-slate-500 dark:text-slate-400">
+                          {situation.pitcher ? getPitcherStats((situation.pitcher.athlete || situation.pitcher).id) : '--'}
+                        </div>
                       </div>
                     </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Top Performers (Final Games) */}
+          {competition.status?.type?.state === 'post' && game.leaders && (
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-6">
+              <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">Top Performers</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {game.leaders.map((leaderGroup: any, idx: number) => (
+                  <div key={idx} className="space-y-3">
+                    <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wide">{leaderGroup.displayName}</h4>
+                    {leaderGroup.leaders?.map((leader: any, lIdx: number) => {
+                      const athlete = leader.athlete;
+                      if (!athlete) return null;
+                      return (
+                        <div key={lIdx} className="flex items-center gap-4 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" onClick={() => handlePlayerClick(athlete)}>
+                          <div className="w-12 h-12 rounded-full overflow-hidden bg-white shrink-0 border border-slate-200 dark:border-slate-600">
+                             {getPlayerImage(athlete) ? (
+                               <img src={getPlayerImage(athlete)} alt={athlete.displayName} className="w-full h-full object-cover" />
+                             ) : (
+                               <div className="w-full h-full flex items-center justify-center text-slate-400 bg-slate-100 dark:bg-slate-700">
+                                 <User className="w-6 h-6" />
+                               </div>
+                             )}
+                          </div>
+                          <div>
+                            <div className="font-bold text-slate-900 dark:text-white">{athlete.displayName}</div>
+                            <div className="text-sm text-slate-500 dark:text-slate-400">
+                              {athlete.team?.abbreviation} • {leader.displayValue}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -337,13 +539,25 @@ export const GameDetailsPage = () => {
             <div className="max-h-[500px] overflow-y-auto">
               {plays.map((play: any, idx: number) => {
                 const isScoring = play.scoringPlay || play.text?.toLowerCase().includes('homer') || play.text?.toLowerCase().includes('scores') || play.type?.text?.toLowerCase().includes('run');
+                const participant = play.participants?.[0]?.athlete;
+
                 return (
                   <div key={idx} className={cn(
                     "p-3 border-b border-slate-50 dark:border-slate-700 flex gap-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors",
                     isScoring && "bg-green-100 dark:bg-green-900/40 border-l-4 border-l-green-500"
                   )}>
-                    <div className="font-mono text-slate-400 w-12 shrink-0 text-right">{play.clock?.displayValue || play.period?.number}</div>
-                    <div>
+                    <div className="font-mono text-slate-400 w-12 shrink-0 text-right pt-1">{play.clock?.displayValue || play.period?.number}</div>
+                    
+                    {participant && getPlayerImage(participant) && (
+                      <div 
+                        className="shrink-0 w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 cursor-pointer hover:border-emerald-500 transition-colors"
+                        onClick={() => handlePlayerClick(participant)}
+                      >
+                        <img src={getPlayerImage(participant)} alt={participant.displayName} className="w-full h-full object-cover" />
+                      </div>
+                    )}
+
+                    <div className="flex-1 min-w-0">
                       <div className="text-slate-900 dark:text-slate-100 font-medium">{play.text}</div>
                       <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{play.type?.text}</div>
                     </div>

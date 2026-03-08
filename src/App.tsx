@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { SportsProvider } from './context/SportsContext';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';

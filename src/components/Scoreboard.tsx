@@ -5,16 +5,22 @@ import { getScores, Score } from '../services/espn';
 import { format, addDays, subDays } from 'date-fns';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Filter, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 
 export const Scoreboard = () => {
   const { sport, league, setSportLeague } = useSports();
-  const { favorites, isFavorite } = useFavorites();
+  const { favorites, isFavorite, removeFavorite } = useFavorites();
   const [scores, setScores] = useState<Score[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'favorites'>('all');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const navigate = useNavigate();
+
+  const handleResetFavorites = () => {
+    if (window.confirm('Are you sure you want to clear all favorite teams?')) {
+      favorites.forEach(f => removeFavorite(f.id));
+    }
+  };
 
   useEffect(() => {
     const fetchScores = async () => {
@@ -27,7 +33,7 @@ export const Scoreboard = () => {
     };
 
     fetchScores();
-    const interval = setInterval(fetchScores, 5000); // Poll every 5s
+    const interval = setInterval(fetchScores, 3000); // Poll every 3s
     return () => clearInterval(interval);
   }, [sport, league, selectedDate]);
 
@@ -201,6 +207,17 @@ export const Scoreboard = () => {
                 <Filter className="w-4 h-4" />
               </div>
             </div>
+            
+            {favorites.length > 0 && (
+              <button 
+                onClick={handleResetFavorites}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100 group"
+                title="Clear all favorite teams"
+              >
+                <Star className="w-4 h-4 fill-slate-300 dark:fill-slate-600 group-hover:fill-red-200 text-slate-400 group-hover:text-red-500" />
+                <span className="hidden sm:inline">Reset</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -223,13 +240,24 @@ export const Scoreboard = () => {
 
             if (!home || !away || !status) return null;
 
+            const isGameFavorite = (home.team?.id && isFavorite(home.team.id)) || (away.team?.id && isFavorite(away.team.id));
+
             return (
               <button 
                 key={game.id} 
                 onClick={() => navigate(`/game/${sport}/${league}/${game.id}`)}
-                className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 p-5 hover:shadow-md transition-all hover:scale-[1.02] cursor-pointer text-left group w-full"
+                className={cn(
+                  "bg-white dark:bg-slate-900 rounded-xl shadow-sm border hover:shadow-md transition-all hover:scale-[1.02] cursor-pointer text-left group w-full relative overflow-hidden",
+                  isGameFavorite ? "border-emerald-500/50 dark:border-emerald-500/50 ring-1 ring-emerald-500/20" : "border-slate-100 dark:border-slate-800",
+                  status.state === 'in' && sport === 'baseball' ? "p-5" : "p-4"
+                )}
               >
-                <div className="flex justify-between items-center mb-4 text-xs font-medium text-slate-500 dark:text-slate-400">
+                {isGameFavorite && (
+                  <div className="absolute top-0 right-0 p-1.5 bg-emerald-500 rounded-bl-xl shadow-sm z-10">
+                    <Star className="w-3 h-3 text-white fill-white" />
+                  </div>
+                )}
+                <div className="flex justify-between items-center mb-3 text-xs font-medium text-slate-500 dark:text-slate-400">
                   <span className={cn(
                     "px-2.5 py-1 rounded-full flex items-center gap-1.5",
                     status.state === 'in' ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "bg-slate-100 dark:bg-slate-800"
@@ -240,34 +268,34 @@ export const Scoreboard = () => {
                   <span>{format(new Date(game.date), 'h:mm a')}</span>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                      <img src={away.team?.logo} alt={away.team?.abbreviation} className="w-10 h-10 object-contain" />
+                      <img src={away.team?.logo} alt={away.team?.abbreviation} className="w-8 h-8 object-contain" />
                       <div className="flex flex-col">
-                        <span className="font-bold text-lg text-slate-900 dark:text-white leading-tight">{away.team?.displayName}</span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">{away.records?.[0]?.summary}</span>
+                        <span className="font-bold text-base text-slate-900 dark:text-white leading-tight">{away.team?.displayName}</span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">{away.records?.[0]?.summary}</span>
                       </div>
                     </div>
-                    <span className="text-3xl font-mono font-bold text-slate-900 dark:text-white">{away.score}</span>
+                    <span className="text-2xl font-mono font-bold text-slate-900 dark:text-white">{away.score}</span>
                   </div>
 
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                      <img src={home.team?.logo} alt={home.team?.abbreviation} className="w-10 h-10 object-contain" />
+                      <img src={home.team?.logo} alt={home.team?.abbreviation} className="w-8 h-8 object-contain" />
                       <div className="flex flex-col">
-                        <span className="font-bold text-lg text-slate-900 dark:text-white leading-tight">{home.team?.displayName}</span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">{home.records?.[0]?.summary}</span>
+                        <span className="font-bold text-base text-slate-900 dark:text-white leading-tight">{home.team?.displayName}</span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">{home.records?.[0]?.summary}</span>
                       </div>
                     </div>
-                    <span className="text-3xl font-mono font-bold text-slate-900 dark:text-white">{home.score}</span>
+                    <span className="text-2xl font-mono font-bold text-slate-900 dark:text-white">{home.score}</span>
                   </div>
                 </div>
                 
                 {status.state === 'in' && sport === 'baseball' && renderBaseballDetails(game)}
 
                 {status.state === 'pre' && (
-                   <div className="mt-4 pt-3 border-t border-slate-50 dark:border-slate-800 text-xs text-slate-400 flex items-center gap-1.5">
+                   <div className="mt-3 pt-3 border-t border-slate-50 dark:border-slate-800 text-xs text-slate-400 flex items-center gap-1.5">
                      <Calendar className="w-3.5 h-3.5" />
                      {competition.venue?.fullName || 'TBD'}
                    </div>

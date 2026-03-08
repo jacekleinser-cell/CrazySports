@@ -7,10 +7,18 @@ interface FullBoxScoreProps {
   isOpen: boolean;
   onClose: () => void;
   boxscore: any;
+  league: string;
 }
 
-export const FullBoxScore = ({ isOpen, onClose, boxscore }: FullBoxScoreProps) => {
+export const FullBoxScore = ({ isOpen, onClose, boxscore, league }: FullBoxScoreProps) => {
   const players = boxscore?.players || [];
+
+  const getPlayerImage = (athlete: any) => {
+    if (!athlete) return null;
+    if (athlete.headshot?.href) return athlete.headshot.href;
+    if (athlete.id) return `https://a.espncdn.com/combiner/i?img=/i/headshots/${league}/players/full/${athlete.id}.png&w=350&h=254`;
+    return null;
+  };
 
   return (
     <AnimatePresence>
@@ -67,8 +75,8 @@ export const FullBoxScore = ({ isOpen, onClose, boxscore }: FullBoxScoreProps) =
                             <tr key={athleteIdx} className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                               <td className="px-3 py-2 font-medium text-slate-900 dark:text-white sticky left-0 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 z-10 border-r border-slate-100 dark:border-slate-700">
                                 <div className="flex items-center gap-2">
-                                  {athleteData.athlete?.headshot?.href && (
-                                    <img src={athleteData.athlete.headshot.href} className="w-6 h-6 rounded-full object-cover bg-slate-100 dark:bg-slate-700" />
+                                  {getPlayerImage(athleteData.athlete) && (
+                                    <img src={getPlayerImage(athleteData.athlete)} className="w-6 h-6 rounded-full object-cover bg-slate-100 dark:bg-slate-700" />
                                   )}
                                   <span className="truncate max-w-[150px]" title={athleteData.athlete?.displayName}>
                                     {athleteData.athlete?.displayName || 'Unknown'}

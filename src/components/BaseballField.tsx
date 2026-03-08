@@ -55,7 +55,7 @@ export const BaseballField = ({ situation }: BaseballFieldProps) => {
       {/* Home Plate */}
       <div className={cn(
         "absolute bottom-[22%] left-[50%] -translate-x-1/2 translate-y-1/2 w-8 h-8 bg-white rotate-45 z-10 shadow-md transition-all duration-300",
-        situation.batter && "bg-yellow-300 ring-4 ring-yellow-400 ring-opacity-80 shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-125 animate-pulse"
+        situation.batter && "bg-yellow-300 ring-4 ring-yellow-400 ring-opacity-80 shadow-[0_0_25px_rgba(250,204,21,0.9)] animate-pulse"
       )} />
 
       {/* Pitcher's Mound */}
