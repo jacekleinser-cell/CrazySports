@@ -11,7 +11,7 @@ export const SettingsPage = () => {
     mainSport, setMainSportPreference,
     notificationsEnabled, toggleNotifications 
   } = useSports();
-  const { clearFavorites } = useFavorites();
+  const { clearFavorites, clearFavoriteTeams } = useFavorites();
   const navigate = useNavigate();
 
   const leagues = [
@@ -116,24 +116,48 @@ export const SettingsPage = () => {
         <section className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-100 dark:border-slate-800">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Data Management</h2>
           
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-medium text-slate-900 dark:text-white">Clear Favorites</div>
-              <div className="text-sm text-slate-500 dark:text-slate-400">
-                Remove all favorite teams and players
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium text-slate-900 dark:text-white">Clear Favorite Teams</div>
+                <div className="text-sm text-slate-500 dark:text-slate-400">
+                  Remove all favorited teams
+                </div>
               </div>
+              <button 
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to clear all favorite teams? This action cannot be undone.')) {
+                    clearFavoriteTeams();
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                Clear Teams
+              </button>
             </div>
-            <button 
-              onClick={() => {
-                if (window.confirm('Are you sure you want to clear all favorites? This action cannot be undone.')) {
-                  clearFavorites();
-                }
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              Clear All
-            </button>
+
+            <div className="h-px bg-slate-100 dark:bg-slate-800" />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium text-slate-900 dark:text-white">Clear All Favorites</div>
+                <div className="text-sm text-slate-500 dark:text-slate-400">
+                  Remove all favorite teams, players, and subscriptions
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to clear all favorites? This action cannot be undone.')) {
+                    clearFavorites();
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                Clear All
+              </button>
+            </div>
           </div>
         </section>
 

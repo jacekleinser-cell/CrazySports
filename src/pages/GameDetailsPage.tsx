@@ -5,7 +5,7 @@ import { getGameSummary } from '../services/espn';
 import { BaseballField } from '../components/BaseballField';
 import { FullBoxScore } from '../components/FullBoxScore';
 import { format } from 'date-fns';
-import { ChevronLeft, RefreshCw, User, Star, X } from 'lucide-react';
+import { ChevronLeft, RefreshCw, User, Star, X, Bell, BellOff } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useFavorites } from '../context/FavoritesContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -17,7 +17,7 @@ export const GameDetailsPage = () => {
   const [game, setGame] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showBoxScore, setShowBoxScore] = useState(false);
-  const { isFavoritePlayer, addFavoritePlayer, removeFavoritePlayer } = useFavorites();
+  const { isFavoritePlayer, addFavoritePlayer, removeFavoritePlayer, isSubscribedToGame, subscribeToGame, unsubscribeFromGame } = useFavorites();
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
 
   // Use URL params if available, otherwise fallback to context (though URL should always have them now)
@@ -55,6 +55,20 @@ export const GameDetailsPage = () => {
   const homeTeam = boxscore.teams?.find((t: any) => t.team.id === homeCompetitor?.id)?.team || homeCompetitor?.team;
   const awayTeam = boxscore.teams?.find((t: any) => t.team.id === awayCompetitor?.id)?.team || awayCompetitor?.team;
 
+  const handleToggleGameSubscription = () => {
+    if (!id) return;
+    if (isSubscribedToGame(id)) {
+      unsubscribeFromGame(id);
+    } else {
+      subscribeToGame({
+        id,
+        league,
+        homeTeam: homeTeam?.displayName || homeTeam?.name || 'Home',
+        awayTeam: awayTeam?.displayName || awayTeam?.name || 'Away'
+      });
+    }
+  };
+
   const enrichPlayer = (player: any) => {
     if (!player) return null;
     const id = player.id || player.playerId;
@@ -63,7 +77,7 @@ export const GameDetailsPage = () => {
     if (boxscore.players) {
       for (const teamPlayers of boxscore.players) {
         for (const statGroup of teamPlayers.statistics) {
-           const found = statGroup.athletes?.find((a: any) => a.athlete.id === id);
+           const found = statGroup.athletes?.find((a: any) => a.athlete.id?.toString() === id?.toString());
            if (found) {
              return { 
                ...player, 
@@ -78,7 +92,7 @@ export const GameDetailsPage = () => {
     return player;
   };
 
-  let currentBatter = rawSituation.batter?.athlete || rawSituation.batter || rawSituation.dueUp?.[0];
+  let currentBatter = rawSituation.batter?.athlete || rawSituation.batter || rawSituation.dueUp?.[0]?.athlete || rawSituation.dueUp?.[0];
   let currentPitcher = rawSituation.pitcher?.athlete || rawSituation.pitcher;
 
   // Fallback: If no batter in situation, try to infer from last play
@@ -87,6 +101,22 @@ export const GameDetailsPage = () => {
     if (lastPlay.participants) {
       const p = lastPlay.participants[0]?.athlete;
       if (p) currentBatter = p;
+    }
+  }
+
+  // If we still don't have a batter or pitcher, let's try to find them in the boxscore
+  if (!currentBatter && boxscore.players) {
+    // This is a very rough fallback, just to show *someone* if the API is being weird
+    const awayBatters = boxscore.players.find((p: any) => p.team.id === awayCompetitor.id)?.statistics.find((s: any) => s.name === 'batting')?.athletes;
+    if (awayBatters && awayBatters.length > 0) {
+      currentBatter = awayBatters[0].athlete;
+    }
+  }
+
+  if (!currentPitcher && boxscore.players) {
+    const homePitchers = boxscore.players.find((p: any) => p.team.id === homeCompetitor.id)?.statistics.find((s: any) => s.name === 'pitching')?.athletes;
+    if (homePitchers && homePitchers.length > 0) {
+      currentPitcher = homePitchers[0].athlete;
     }
   }
 
@@ -99,7 +129,8 @@ export const GameDetailsPage = () => {
   const getPlayerImage = (athlete: any) => {
     if (!athlete) return null;
     if (athlete.headshot?.href) return athlete.headshot.href;
-    if (athlete.id) return `https://a.espncdn.com/combiner/i?img=/i/headshots/${league}/players/full/${athlete.id}.png&w=350&h=254`;
+    const id = athlete.id || athlete.playerId;
+    if (id) return `https://a.espncdn.com/combiner/i?img=/i/headshots/${league}/players/full/${id}.png&w=350&h=254`;
     return null;
   };
 
@@ -181,12 +212,13 @@ export const GameDetailsPage = () => {
   const toggleFavorite = (e: React.MouseEvent, athlete: any) => {
     e.stopPropagation();
     if (!athlete) return;
-    if (isFavoritePlayer(athlete.id)) {
-      removeFavoritePlayer(athlete.id);
+    const athleteId = athlete.id || athlete.playerId;
+    if (isFavoritePlayer(athleteId)) {
+      removeFavoritePlayer(athleteId);
     } else {
       addFavoritePlayer({
-        id: athlete.id,
-        name: athlete.displayName,
+        id: athleteId,
+        name: athlete.displayName || athlete.fullName,
         position: athlete.position?.abbreviation,
         headshot: getPlayerImage(athlete) || undefined,
         team: athlete.team?.displayName
@@ -226,13 +258,13 @@ export const GameDetailsPage = () => {
               
               <div className="relative h-48 bg-gradient-to-br from-slate-800 to-slate-900 flex items-end justify-center pb-0 overflow-hidden">
                  {getPlayerImage(selectedPlayer) ? (
-                   <img src={getPlayerImage(selectedPlayer)} alt={selectedPlayer.displayName} className="h-full object-contain translate-y-2" />
+                   <img src={getPlayerImage(selectedPlayer)} alt={selectedPlayer.displayName || selectedPlayer.fullName} className="h-full object-contain translate-y-2" />
                  ) : (
                    <User className="w-24 h-24 text-slate-600 mb-8" />
                  )}
                  <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-slate-900 to-transparent" />
                  <div className="absolute bottom-4 left-4 text-white">
-                   <h2 className="text-2xl font-bold">{selectedPlayer.displayName}</h2>
+                   <h2 className="text-2xl font-bold">{selectedPlayer.displayName || selectedPlayer.fullName}</h2>
                    <p className="text-slate-300">{selectedPlayer.position?.displayName || selectedPlayer.position?.abbreviation} • {selectedPlayer.team?.displayName}</p>
                  </div>
               </div>
@@ -243,13 +275,13 @@ export const GameDetailsPage = () => {
                       onClick={(e) => toggleFavorite(e, selectedPlayer)}
                       className={cn(
                         "flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-colors",
-                        isFavoritePlayer(selectedPlayer.id) 
+                        isFavoritePlayer(selectedPlayer.id || selectedPlayer.playerId) 
                           ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" 
                           : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
                       )}
                     >
-                      <Star className={cn("w-4 h-4", isFavoritePlayer(selectedPlayer.id) && "fill-current")} />
-                      {isFavoritePlayer(selectedPlayer.id) ? "Favorited" : "Add to Favorites"}
+                      <Star className={cn("w-4 h-4", isFavoritePlayer(selectedPlayer.id || selectedPlayer.playerId) && "fill-current")} />
+                      {isFavoritePlayer(selectedPlayer.id || selectedPlayer.playerId) ? "Favorited" : "Add to Favorites"}
                     </button>
                  </div>
 
@@ -277,15 +309,41 @@ export const GameDetailsPage = () => {
         )}
       </AnimatePresence>
 
-      <button 
-        onClick={() => navigate(-1)}
-        className="mb-4 flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-      >
-        <ChevronLeft className="w-4 h-4" /> Back to Scores
-      </button>
+      <div className="flex justify-between items-center mb-4">
+        <button 
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" /> Back to Scores
+        </button>
+        
+        {id && (
+          <button
+            onClick={handleToggleGameSubscription}
+            className={cn(
+              "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
+              isSubscribedToGame(id)
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+            )}
+          >
+            {isSubscribedToGame(id) ? (
+              <>
+                <Bell className="w-4 h-4 fill-current" />
+                Notifications On
+              </>
+            ) : (
+              <>
+                <BellOff className="w-4 h-4" />
+                Notify Me
+              </>
+            )}
+          </button>
+        )}
+      </div>
 
       {/* Header */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-8 mb-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-8 mb-6 relative">
         <div className="flex justify-between items-center">
           {/* Away Team (Left) */}
           <div className="flex items-center gap-6 flex-1">
@@ -425,11 +483,21 @@ export const GameDetailsPage = () => {
                       )}
                     >
                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <Star className={cn("w-5 h-5", (situation.batter?.athlete || situation.batter) && isFavoritePlayer((situation.batter?.athlete || situation.batter).id) ? "fill-yellow-400 text-yellow-400" : "text-slate-300")} />
+                         <Star className={cn("w-5 h-5", (situation.batter?.athlete || situation.batter) && isFavoritePlayer((situation.batter?.athlete || situation.batter).id || (situation.batter?.athlete || situation.batter).playerId) ? "fill-yellow-400 text-yellow-400" : "text-slate-300")} />
                       </div>
                       <div className="w-16 h-16 rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden shrink-0 border-2 border-slate-300 dark:border-slate-500">
                         {getPlayerImage(situation.batter?.athlete || situation.batter) ? (
-                          <img src={getPlayerImage(situation.batter?.athlete || situation.batter)} alt={situation.batter?.athlete?.displayName || situation.batter?.displayName || situation.batter?.fullName} className="w-full h-full object-cover" />
+                          <img 
+                            src={getPlayerImage(situation.batter?.athlete || situation.batter)} 
+                            alt={situation.batter?.athlete?.displayName || situation.batter?.displayName || situation.batter?.fullName} 
+                            className="w-full h-full object-cover" 
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              if (e.currentTarget.parentElement) {
+                                e.currentTarget.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-slate-400"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
+                              }
+                            }}
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-slate-400">
                             <User className="w-8 h-8" />
@@ -439,7 +507,7 @@ export const GameDetailsPage = () => {
                       <div className="min-w-0">
                         <div className="text-xs text-emerald-600 dark:text-emerald-400 uppercase tracking-wide font-bold mb-0.5">At Bat</div>
                         <div className="font-bold text-lg text-slate-900 dark:text-white truncate">
-                          {situation.batter?.athlete?.displayName || situation.batter?.displayName || situation.batter?.fullName || (
+                          {situation.batter?.athlete?.displayName || situation.batter?.displayName || situation.batter?.fullName || situation.batter?.athlete?.shortName || situation.batter?.shortName || (
                             <span className="text-slate-400 italic font-normal text-base">
                               {competition.status?.type?.description || "Between Innings"}
                             </span>
@@ -449,7 +517,7 @@ export const GameDetailsPage = () => {
                           {(situation.batter?.athlete || situation.batter)?.position?.abbreviation} • {(situation.batter?.athlete || situation.batter)?.team?.abbreviation}
                         </div>
                         <div className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300 mt-1">
-                          {situation.batter ? getBatterStats((situation.batter.athlete || situation.batter).id) : '--'}
+                          {situation.batter ? getBatterStats((situation.batter.athlete || situation.batter).id || (situation.batter.athlete || situation.batter).playerId) : '--'}
                         </div>
                       </div>
                     </div>
@@ -466,11 +534,21 @@ export const GameDetailsPage = () => {
                       )}
                     >
                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <Star className={cn("w-5 h-5", (situation.pitcher?.athlete || situation.pitcher) && isFavoritePlayer((situation.pitcher?.athlete || situation.pitcher).id) ? "fill-yellow-400 text-yellow-400" : "text-slate-300")} />
+                         <Star className={cn("w-5 h-5", (situation.pitcher?.athlete || situation.pitcher) && isFavoritePlayer((situation.pitcher?.athlete || situation.pitcher).id || (situation.pitcher?.athlete || situation.pitcher).playerId) ? "fill-yellow-400 text-yellow-400" : "text-slate-300")} />
                       </div>
                       <div className="w-16 h-16 rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden shrink-0 border-2 border-slate-300 dark:border-slate-500">
                         {getPlayerImage(situation.pitcher?.athlete || situation.pitcher) ? (
-                          <img src={getPlayerImage(situation.pitcher?.athlete || situation.pitcher)} alt={situation.pitcher?.athlete?.displayName || situation.pitcher?.displayName || situation.pitcher?.fullName} className="w-full h-full object-cover" />
+                          <img 
+                            src={getPlayerImage(situation.pitcher?.athlete || situation.pitcher)} 
+                            alt={situation.pitcher?.athlete?.displayName || situation.pitcher?.displayName || situation.pitcher?.fullName} 
+                            className="w-full h-full object-cover" 
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              if (e.currentTarget.parentElement) {
+                                e.currentTarget.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-slate-400"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
+                              }
+                            }}
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-slate-400">
                             <User className="w-8 h-8" />
@@ -480,14 +558,14 @@ export const GameDetailsPage = () => {
                       <div className="min-w-0">
                         <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-bold mb-0.5">Pitching</div>
                         <div className="font-bold text-lg text-slate-900 dark:text-white truncate">
-                          {situation.pitcher?.athlete?.displayName || situation.pitcher?.displayName || situation.pitcher?.fullName || (
+                          {situation.pitcher?.athlete?.displayName || situation.pitcher?.displayName || situation.pitcher?.fullName || situation.pitcher?.athlete?.shortName || situation.pitcher?.shortName || (
                              <span className="text-slate-400 italic font-normal text-base">
                                {competition.status?.type?.description || "Between Innings"}
                              </span>
                           )}
                         </div>
                         <div className="text-sm text-slate-500 dark:text-slate-400">
-                          {situation.pitcher ? getPitcherStats((situation.pitcher.athlete || situation.pitcher).id) : '--'}
+                          {situation.pitcher ? getPitcherStats((situation.pitcher.athlete || situation.pitcher).id || (situation.pitcher.athlete || situation.pitcher).playerId) : '--'}
                         </div>
                       </div>
                     </div>

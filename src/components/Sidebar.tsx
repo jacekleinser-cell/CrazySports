@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Trophy, Newspaper, Activity, Settings, ChevronDown, ChevronUp, Star, Trash2, User, BarChart2 } from 'lucide-react';
+import { X, Trophy, Newspaper, Activity, Settings, ChevronDown, ChevronUp, Star, Trash2, User, BarChart2, Search } from 'lucide-react';
 import { useSports, Sport, League } from '../context/SportsContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { cn } from '../lib/utils';
@@ -9,9 +9,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenSearch?: () => void;
 }
 
-export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
+export const Sidebar = ({ isOpen, onClose, onOpenSearch }: SidebarProps) => {
   const { 
     sport, league, setSportLeague, 
     mainSport, setMainSportPreference,
@@ -73,76 +74,88 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
             <div className="p-4 space-y-6 flex-1 overflow-y-auto">
               {/* Favorites Section */}
-              {(favorites.length > 0 || favoritePlayers.length > 0) && (
-                <div className="pb-6 border-b border-slate-800 space-y-6">
-                  {favorites.length > 0 && (
-                    <div>
-                      <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-3">My Teams</h3>
-                      <div className="space-y-1">
-                        {favorites.map((team) => (
-                          <div key={team.id} className="flex items-center justify-between group px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors">
-                            <div className="flex items-center gap-3 overflow-hidden">
-                              {team.logo ? (
-                                <img src={team.logo} alt={team.name} className="w-6 h-6 object-contain" />
-                              ) : (
-                                <div className="w-6 h-6 bg-slate-700 rounded-full flex items-center justify-center text-[10px] font-bold">
-                                  {team.name.substring(0, 2)}
-                                </div>
-                              )}
-                              <span className="text-sm font-medium truncate text-slate-300 group-hover:text-white">{team.name}</span>
-                            </div>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeFavorite(team.id);
-                              }}
-                              className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                              title="Remove from favorites"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+              <div className="pb-6 border-b border-slate-800 space-y-6">
+                {favorites.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-3">My Teams</h3>
+                    <div className="space-y-1">
+                      {favorites.map((team) => (
+                        <div key={team.id} className="flex items-center justify-between group px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors">
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            {team.logo ? (
+                              <img src={team.logo} alt={team.name} className="w-6 h-6 object-contain" />
+                            ) : (
+                              <div className="w-6 h-6 bg-slate-700 rounded-full flex items-center justify-center text-[10px] font-bold">
+                                {team.name.substring(0, 2)}
+                              </div>
+                            )}
+                            <span className="text-sm font-medium truncate text-slate-300 group-hover:text-white">{team.name}</span>
                           </div>
-                        ))}
-                      </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeFavorite(team.id);
+                            }}
+                            className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                            title="Remove from favorites"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {favoritePlayers.length > 0 && (
-                    <div>
-                      <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-3">My Players</h3>
-                      <div className="space-y-1">
-                        {favoritePlayers.map((player) => (
-                          <div key={player.id} className="flex items-center justify-between group px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors">
-                            <div className="flex items-center gap-3 overflow-hidden">
-                              <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden shrink-0 border border-slate-600">
-                                {player.headshot ? (
-                                  <img src={player.headshot} alt={player.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  <User className="w-4 h-4 text-slate-400" />
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <div className="text-sm font-medium truncate text-slate-300 group-hover:text-white">{player.name}</div>
-                                <div className="text-[10px] text-slate-500 truncate">{player.team}</div>
-                              </div>
+                {favoritePlayers.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-3">My Players</h3>
+                    <div className="space-y-1">
+                      {favoritePlayers.map((player) => (
+                        <div key={player.id} className="flex items-center justify-between group px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors">
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden shrink-0 border border-slate-600">
+                              {player.headshot ? (
+                                <img src={player.headshot} alt={player.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <User className="w-4 h-4 text-slate-400" />
+                              )}
                             </div>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeFavoritePlayer(player.id);
-                              }}
-                              className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                              title="Remove from favorites"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium truncate text-slate-300 group-hover:text-white">{player.name}</div>
+                              <div className="text-[10px] text-slate-500 truncate">{player.team}</div>
+                            </div>
                           </div>
-                        ))}
-                      </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeFavoritePlayer(player.id);
+                            }}
+                            className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                            title="Remove from favorites"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
+
+                {favorites.length === 0 && favoritePlayers.length === 0 && (
+                  <div className="px-3 py-4 text-center border border-slate-800 rounded-lg bg-slate-800/50">
+                    <Star className="w-6 h-6 text-slate-500 mx-auto mb-2" />
+                    <p className="text-sm text-slate-400 mb-3">No favorites yet.</p>
+                  </div>
+                )}
+                
+                <button 
+                  onClick={onOpenSearch}
+                  className="w-full text-left px-3 py-2 mt-2 rounded-lg text-sm font-medium text-emerald-500 hover:bg-emerald-500/10 flex items-center justify-center gap-2 transition-colors border border-emerald-500/20"
+                >
+                  <Search className="w-4 h-4" /> Search Teams & Players
+                </button>
+              </div>
 
               <div>
                 <div className="flex items-center justify-between w-full">

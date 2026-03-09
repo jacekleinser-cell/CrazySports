@@ -31,6 +31,10 @@ function Layout({ children }: { children: React.ReactNode }) {
       <Sidebar 
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)} 
+        onOpenSearch={() => {
+          setSidebarOpen(false);
+          setSearchOpen(true);
+        }}
       />
       
       <SearchModal 
@@ -45,6 +49,7 @@ function Layout({ children }: { children: React.ReactNode }) {
 
 import { FavoritesProvider } from './context/FavoritesContext';
 import { NotificationManager } from './components/NotificationManager';
+import { Toaster } from 'sonner';
 
 export default function App() {
   return (
@@ -62,6 +67,7 @@ export default function App() {
               <Route path="/game/:sport/:league/:id" element={<GameDetailsPage />} />
             </Routes>
             <NotificationManager />
+            <Toaster theme="dark" position="bottom-right" />
           </Layout>
         </Router>
       </FavoritesProvider>

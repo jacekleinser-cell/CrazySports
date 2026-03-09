@@ -13,9 +13,10 @@ const LEAGUE_TO_SPORT: Record<string, Sport> = {
 };
 
 export const NotificationManager = () => {
-  const { favorites } = useFavorites();
+  const { favorites, subscribedGames } = useFavorites();
   const { notificationsEnabled } = useSports();
   const previousScoresRef = useRef<Record<string, string>>({});
+  const notifiedUpcomingRef = useRef<Record<string, boolean>>({});
 
   useEffect(() => {
     // Check if notifications are supported and permitted
@@ -24,11 +25,16 @@ export const NotificationManager = () => {
     }
 
     const checkScores = async () => {
-      // Group favorites by league to minimize API calls
+      // Group favorites and subscribed games by league to minimize API calls
       const leaguesToFetch = new Set<string>();
       favorites.forEach(fav => {
         if (fav.notify && fav.league) {
           leaguesToFetch.add(fav.league);
+        }
+      });
+      subscribedGames.forEach(game => {
+        if (game.league) {
+          leaguesToFetch.add(game.league);
         }
       });
 
@@ -51,26 +57,70 @@ export const NotificationManager = () => {
             const isFavoriteGame = favorites.some(fav => 
               fav.notify && (fav.id === home.team.id || fav.id === away.team.id)
             );
+            const isSubscribedGame = subscribedGames.some(sub => sub.id === game.id);
 
-            if (!isFavoriteGame) return;
+            if (!isFavoriteGame && !isSubscribedGame) return;
 
-            const homeScore = home.score || '0';
-            const awayScore = away.score || '0';
-            const scoreString = `${awayScore}-${homeScore}`;
-            
-            // Check for score change
-            if (previousScoresRef.current[game.id] && previousScoresRef.current[game.id] !== scoreString) {
-              const homeName = home.team.displayName;
-              const awayName = away.team.displayName;
+            const homeName = home.team.displayName;
+            const awayName = away.team.displayName;
+
+            // 15-minute pre-game notification
+            if (game.date && game.status?.type?.state === 'pre') {
+              const gameTime = new Date(game.date).getTime();
+              const now = Date.now();
+              const diffMinutes = (gameTime - now) / 1000 / 60;
               
-              new Notification("Score Update", {
-                body: `${awayName} ${awayScore} - ${homeScore} ${homeName}`,
-                icon: '/vite.svg', // Placeholder
-                tag: game.id // Prevent duplicate notifications stacking too much
-              });
+              if (diffMinutes > 0 && diffMinutes <= 15 && !notifiedUpcomingRef.current[game.id]) {
+                new Notification("Game Starting Soon", {
+                  body: `${awayName} vs ${homeName} is starting in ${Math.ceil(diffMinutes)} minutes!`,
+                  icon: '/vite.svg',
+                  tag: `upcoming-${game.id}`
+                });
+                notifiedUpcomingRef.current[game.id] = true;
+              }
             }
-            
-            previousScoresRef.current[game.id] = scoreString;
+
+            // Score update notification
+            if (game.status?.type?.state === 'in') {
+              const homeScore = home.score || '0';
+              const awayScore = away.score || '0';
+              const scoreString = `${awayScore}-${homeScore}`;
+              
+              // Check for score change
+              if (previousScoresRef.current[game.id] && previousScoresRef.current[game.id] !== scoreString) {
+                const prevScoreString = previousScoresRef.current[game.id];
+                const [prevAway, prevHome] = prevScoreString.split('-').map(Number);
+                const currAway = Number(awayScore);
+                const currHome = Number(homeScore);
+                
+                let isSignificant = false;
+                
+                if (sport === 'basketball') {
+                  // For basketball, notify on lead changes, ties, or double-digit leads
+                  const prevLead = prevAway > prevHome ? 'away' : prevHome > prevAway ? 'home' : 'tie';
+                  const currLead = currAway > currHome ? 'away' : currHome > currAway ? 'home' : 'tie';
+                  
+                  if (prevLead !== currLead) {
+                    isSignificant = true; // Lead change or tie
+                  } else if (Math.abs(currAway - currHome) >= 10 && Math.abs(prevAway - prevHome) < 10) {
+                    isSignificant = true; // Double digit lead established
+                  }
+                } else {
+                  // For other sports (baseball, football, hockey, soccer), any score change is significant
+                  isSignificant = true;
+                }
+
+                if (isSignificant) {
+                  new Notification("Score Update", {
+                    body: `${awayName} ${awayScore} - ${homeScore} ${homeName}`,
+                    icon: '/vite.svg', // Placeholder
+                    tag: game.id // Prevent duplicate notifications stacking too much
+                  });
+                }
+              }
+              
+              previousScoresRef.current[game.id] = scoreString;
+            }
           });
         } catch (error) {
           console.error(`Error checking scores for ${league}:`, error);
@@ -82,7 +132,7 @@ export const NotificationManager = () => {
     checkScores(); // Initial check
 
     return () => clearInterval(interval);
-  }, [favorites, notificationsEnabled]);
+  }, [favorites, subscribedGames, notificationsEnabled]);
 
   return null; // This component doesn't render anything
 };

@@ -90,12 +90,19 @@ export const Scoreboard = () => {
             {/* Batter */}
             {situation.batter && (
               <div className="flex items-center gap-2">
-                <img 
-                  src={`https://a.espncdn.com/combiner/i?img=/i/headshots/mlb/players/full/${situation.batter.playerId}.png&w=48&h=48&scale=crop`} 
-                  alt={situation.batter.fullName}
-                  className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-600 bg-slate-100 object-cover"
-                  onError={(e) => (e.currentTarget.style.display = 'none')}
-                />
+                <div className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-600 bg-slate-100 overflow-hidden shrink-0">
+                  <img 
+                    src={`https://a.espncdn.com/combiner/i?img=/i/headshots/mlb/players/full/${situation.batter.playerId || situation.batter.id}.png&w=48&h=48&scale=crop`} 
+                    alt={situation.batter.fullName}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      if (e.currentTarget.parentElement) {
+                        e.currentTarget.parentElement.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user text-slate-400 m-auto h-full"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+                      }
+                    }}
+                  />
+                </div>
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{situation.batter.fullName}</div>
                   <div className="text-[10px] text-slate-500 uppercase tracking-wide">Batting</div>
@@ -106,12 +113,19 @@ export const Scoreboard = () => {
             {/* Pitcher */}
             {situation.pitcher && (
               <div className="flex items-center gap-2">
-                <img 
-                  src={`https://a.espncdn.com/combiner/i?img=/i/headshots/mlb/players/full/${situation.pitcher.playerId}.png&w=48&h=48&scale=crop`} 
-                  alt={situation.pitcher.fullName}
-                  className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-600 bg-slate-100 object-cover"
-                  onError={(e) => (e.currentTarget.style.display = 'none')}
-                />
+                <div className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-600 bg-slate-100 overflow-hidden shrink-0">
+                  <img 
+                    src={`https://a.espncdn.com/combiner/i?img=/i/headshots/mlb/players/full/${situation.pitcher.playerId || situation.pitcher.id}.png&w=48&h=48&scale=crop`} 
+                    alt={situation.pitcher.fullName}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      if (e.currentTarget.parentElement) {
+                        e.currentTarget.parentElement.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user text-slate-400 m-auto h-full"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+                      }
+                    }}
+                  />
+                </div>
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{situation.pitcher.fullName}</div>
                   <div className="text-[10px] text-slate-500 uppercase tracking-wide">Pitching</div>
