@@ -18,7 +18,7 @@ export const Scoreboard = () => {
 
   const handleResetFavorites = () => {
     if (window.confirm('Are you sure you want to clear all favorite teams?')) {
-      favorites.forEach(f => removeFavorite(f.id));
+      favorites.forEach(f => removeFavorite(f.id, f.league));
     }
   };
 
@@ -41,7 +41,7 @@ export const Scoreboard = () => {
     if (filter === 'favorites') {
       const homeId = game.competitions?.[0]?.competitors?.find(c => c.homeAway === 'home')?.team?.id;
       const awayId = game.competitions?.[0]?.competitors?.find(c => c.homeAway === 'away')?.team?.id;
-      return (homeId && isFavorite(homeId)) || (awayId && isFavorite(awayId));
+      return (homeId && isFavorite(homeId, league)) || (awayId && isFavorite(awayId, league));
     }
     return true;
   }).sort((a, b) => {
@@ -51,8 +51,8 @@ export const Scoreboard = () => {
     const bHomeId = b.competitions?.[0]?.competitors?.find(c => c.homeAway === 'home')?.team?.id;
     const bAwayId = b.competitions?.[0]?.competitors?.find(c => c.homeAway === 'away')?.team?.id;
 
-    const aIsFav = (aHomeId && isFavorite(aHomeId)) || (aAwayId && isFavorite(aAwayId));
-    const bIsFav = (bHomeId && isFavorite(bHomeId)) || (bAwayId && isFavorite(bAwayId));
+    const aIsFav = (aHomeId && isFavorite(aHomeId, league)) || (aAwayId && isFavorite(aAwayId, league));
+    const bIsFav = (bHomeId && isFavorite(bHomeId, league)) || (bAwayId && isFavorite(bAwayId, league));
 
     if (aIsFav && !bIsFav) return -1;
     if (!aIsFav && bIsFav) return 1;
@@ -96,10 +96,9 @@ export const Scoreboard = () => {
                     alt={situation.batter.fullName}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      if (e.currentTarget.parentElement) {
-                        e.currentTarget.parentElement.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user text-slate-400 m-auto h-full"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-                      }
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E";
+                      e.currentTarget.className = "w-full h-full object-cover p-1.5 opacity-50";
                     }}
                   />
                 </div>
@@ -119,10 +118,9 @@ export const Scoreboard = () => {
                     alt={situation.pitcher.fullName}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      if (e.currentTarget.parentElement) {
-                        e.currentTarget.parentElement.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user text-slate-400 m-auto h-full"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-                      }
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E";
+                      e.currentTarget.className = "w-full h-full object-cover p-1.5 opacity-50";
                     }}
                   />
                 </div>
@@ -254,7 +252,7 @@ export const Scoreboard = () => {
 
             if (!home || !away || !status) return null;
 
-            const isGameFavorite = (home.team?.id && isFavorite(home.team.id)) || (away.team?.id && isFavorite(away.team.id));
+            const isGameFavorite = (home.team?.id && isFavorite(home.team.id, league)) || (away.team?.id && isFavorite(away.team.id, league));
 
             return (
               <button 

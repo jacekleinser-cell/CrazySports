@@ -55,7 +55,7 @@ export const NotificationManager = () => {
             if (!home || !away) return;
 
             const isFavoriteGame = favorites.some(fav => 
-              fav.notify && (fav.id === home.team.id || fav.id === away.team.id)
+              fav.notify && fav.league === league && (fav.id === home.team.id || fav.id === away.team.id)
             );
             const isSubscribedGame = subscribedGames.some(sub => sub.id === game.id);
 

@@ -29,9 +29,9 @@ interface FavoritesContextType {
   favoritePlayers: FavoritePlayer[];
   subscribedGames: SubscribedGame[];
   addFavorite: (team: Omit<FavoriteTeam, 'notify'>) => void;
-  removeFavorite: (teamId: string) => void;
-  toggleFavoriteNotification: (teamId: string) => void;
-  isFavorite: (teamId: string) => boolean;
+  removeFavorite: (teamId: string, league?: string) => void;
+  toggleFavoriteNotification: (teamId: string, league?: string) => void;
+  isFavorite: (teamId: string, league?: string) => boolean;
   addFavoritePlayer: (player: FavoritePlayer) => void;
   removeFavoritePlayer: (playerId: string) => void;
   isFavoritePlayer: (playerId: string) => boolean;
@@ -97,25 +97,25 @@ export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const removeFavorite = (teamId: string) => {
+  const removeFavorite = (teamId: string, league?: string) => {
     if (!teamId) return;
-    const team = favorites.find(f => f.id === teamId);
-    setFavorites(prev => prev.filter(f => f.id !== teamId));
+    const team = favorites.find(f => f.id === teamId && (!league || f.league === league));
+    setFavorites(prev => prev.filter(f => !(f.id === teamId && (!league || f.league === league))));
     if (team) {
       toast.success(`Removed ${team.name} from favorites`);
     }
   };
 
-  const toggleFavoriteNotification = (teamId: string) => {
+  const toggleFavoriteNotification = (teamId: string, league?: string) => {
     if (!teamId) return;
     setFavorites(prev => prev.map(f => 
-      f.id === teamId ? { ...f, notify: !f.notify } : f
+      (f.id === teamId && (!league || f.league === league)) ? { ...f, notify: !f.notify } : f
     ));
   };
 
-  const isFavorite = (teamId: string) => {
+  const isFavorite = (teamId: string, league?: string) => {
     if (!teamId) return false;
-    return favorites.some(f => f.id === teamId);
+    return favorites.some(f => f.id === teamId && (!league || f.league === league));
   };
 
   const addFavoritePlayer = (player: FavoritePlayer) => {

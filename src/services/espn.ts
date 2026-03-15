@@ -1,4 +1,6 @@
 
+import { getMlbScores, getMlbStandings } from './mlbStats';
+
 const BASE_URL = "https://site.api.espn.com/apis/site/v2/sports";
 const CORE_URL = "https://site.web.api.espn.com/apis/common/v3/search";
 
@@ -121,6 +123,9 @@ export interface Standing {
 }
 
 export const getScores = async (sport: string, league: string, date?: string): Promise<Score[]> => {
+  if (league === 'mlb') {
+    return getMlbScores(date);
+  }
   try {
     const dateParam = date ? `?dates=${date}` : '';
     const response = await fetch(`${BASE_URL}/${sport}/${league}/scoreboard${dateParam}`);
@@ -151,6 +156,9 @@ export interface StandingsGroup {
 }
 
 export const getStandings = async (sport: string, league: string): Promise<StandingsGroup[]> => {
+  if (league === 'mlb') {
+    return getMlbStandings();
+  }
   try {
     const response = await fetch(`https://site.api.espn.com/apis/v2/sports/${sport}/${league}/standings`); 
     if (!response.ok) throw new Error("Failed to fetch standings");
@@ -192,7 +200,50 @@ export const getStandings = async (sport: string, league: string): Promise<Stand
 
 export const getGameSummary = async (sport: string, league: string, eventId: string) => {
   try {
-    const response = await fetch(`${BASE_URL}/${sport}/${league}/summary?event=${eventId}`);
+    let finalEventId = eventId;
+    
+    // If it's MLB and eventId looks like an MLB Stats API gamePk (usually 6-7 digits)
+    if (league === 'mlb' && eventId.length < 8) {
+      try {
+        const mlbRes = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${eventId}/feed/live`);
+        if (mlbRes.ok) {
+          const mlbData = await mlbRes.json();
+          const dateTimeStr = mlbData.gameData?.datetime?.dateTime;
+          
+          if (dateTimeStr) {
+            const gameDate = new Date(dateTimeStr);
+            // Approximate EST by subtracting 4 hours from UTC
+            gameDate.setHours(gameDate.getHours() - 4);
+            const year = gameDate.getFullYear();
+            const month = String(gameDate.getMonth() + 1).padStart(2, '0');
+            const day = String(gameDate.getDate()).padStart(2, '0');
+            const dateStr = `${year}${month}${day}`;
+            
+            const homeTeamName = mlbData.gameData?.teams?.home?.name;
+            
+            if (homeTeamName) {
+              const espnRes = await fetch(`${BASE_URL}/${sport}/${league}/scoreboard?dates=${dateStr}`);
+              if (espnRes.ok) {
+                const espnData = await espnRes.json();
+                const espnGame = espnData.events?.find((e: any) => 
+                  e.competitions?.[0]?.competitors?.some((c: any) => 
+                    c.homeAway === 'home' && 
+                    (c.team.displayName === homeTeamName || c.team.name === homeTeamName || homeTeamName.includes(c.team.name))
+                  )
+                );
+                if (espnGame) {
+                  finalEventId = espnGame.id;
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to map MLB gamePk to ESPN eventId:", err);
+      }
+    }
+
+    const response = await fetch(`${BASE_URL}/${sport}/${league}/summary?event=${finalEventId}`);
     if (!response.ok) throw new Error("Failed to fetch game summary");
     const data = await response.json();
     return data;

@@ -94,7 +94,7 @@ export const Sidebar = ({ isOpen, onClose, onOpenSearch }: SidebarProps) => {
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
-                              removeFavorite(team.id);
+                              removeFavorite(team.id, team.league);
                             }}
                             className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
                             title="Remove from favorites"

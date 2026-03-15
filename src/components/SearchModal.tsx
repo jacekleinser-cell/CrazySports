@@ -81,13 +81,14 @@ export const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
     const teamId = team.id;
     if (!teamId) return;
 
-    if (isFavorite(teamId)) {
-      removeFavorite(teamId);
+    const teamLeague = team.league || league.toUpperCase();
+    if (isFavorite(teamId, teamLeague)) {
+      removeFavorite(teamId, teamLeague);
     } else {
       addFavorite({
         id: teamId,
         name: team.displayName,
-        league: team.league || league.toUpperCase(),
+        league: teamLeague,
         logo: team.logos?.[0]?.href
       });
     }
@@ -158,7 +159,7 @@ export const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
                     </h3>
                     <div className="grid grid-cols-1 gap-1">
                       {suggestedTeams.map((team) => {
-                        const isFav = isFavorite(team.id);
+                        const isFav = isFavorite(team.id, team.league || league.toUpperCase());
                         return (
                           <div 
                             key={`suggested-team-${team.id}`} 
@@ -210,7 +211,7 @@ export const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
                       </h3>
                       <div className="grid grid-cols-1 gap-1">
                         {results.teams.map((team) => {
-                          const isFav = isFavorite(team.id);
+                          const isFav = isFavorite(team.id, team.league || league.toUpperCase());
                           return (
                             <div 
                               key={`team-${team.id}`} 

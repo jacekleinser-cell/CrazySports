@@ -26,8 +26,8 @@ export const Standings = () => {
 
   const toggleFavorite = (e: React.MouseEvent, team: Standing['team']) => {
     e.stopPropagation();
-    if (isFavorite(team.id)) {
-      removeFavorite(team.id);
+    if (isFavorite(team.id, league)) {
+      removeFavorite(team.id, league);
     } else {
       addFavorite({
         id: team.id,
@@ -78,7 +78,7 @@ export const Standings = () => {
 
       {groups.map((group) => {
         const filteredEntries = showFavoritesOnly 
-          ? group.entries.filter(entry => isFavorite(entry.team?.id))
+          ? group.entries.filter(entry => isFavorite(entry.team?.id, league))
           : group.entries;
 
         if (filteredEntries.length === 0 && showFavoritesOnly) return null;
@@ -126,7 +126,7 @@ export const Standings = () => {
                               <Star 
                                 className={cn(
                                   "w-4 h-4", 
-                                  isFavorite(entry.team?.id) 
+                                  isFavorite(entry.team?.id, league) 
                                     ? "fill-yellow-400 text-yellow-400" 
                                     : "text-slate-300 dark:text-slate-600"
                                 )} 
@@ -171,7 +171,7 @@ export const Standings = () => {
         );
       })}
       
-      {showFavoritesOnly && groups.every(g => g.entries.filter(e => isFavorite(e.team?.id)).length === 0) && (
+      {showFavoritesOnly && groups.every(g => g.entries.filter(e => isFavorite(e.team?.id, league)).length === 0) && (
         <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
           No favorite teams found in these standings.
         </div>
