@@ -9,6 +9,7 @@ import { ChevronLeft, RefreshCw, User, Star, X, Bell, BellOff } from 'lucide-rea
 import { cn } from '../lib/utils';
 import { useFavorites } from '../context/FavoritesContext';
 import { motion, AnimatePresence } from 'motion/react';
+import { ChatRoom } from '../components/ChatRoom';
 
 export const GameDetailsPage = () => {
   const { sport: urlSport, league: urlLeague, id } = useParams();
@@ -19,6 +20,7 @@ export const GameDetailsPage = () => {
   const [showBoxScore, setShowBoxScore] = useState(false);
   const { isFavoritePlayer, addFavoritePlayer, removeFavoritePlayer, isSubscribedToGame, subscribeToGame, unsubscribeFromGame } = useFavorites();
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'scores' | 'chat'>('scores');
 
   // Use URL params if available, otherwise fallback to context (though URL should always have them now)
   const sport = urlSport || contextSport;
@@ -426,9 +428,42 @@ export const GameDetailsPage = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
+      {/* Tabs */}
+      <div className="flex border-b border-slate-200 dark:border-slate-700 mb-6">
+        <button
+          onClick={() => setActiveTab('scores')}
+          className={cn(
+            "px-6 py-3 font-medium text-sm transition-colors relative",
+            activeTab === 'scores' 
+              ? "text-emerald-600 dark:text-emerald-400" 
+              : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          )}
+        >
+          Scores & Stats
+          {activeTab === 'scores' && (
+            <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" />
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('chat')}
+          className={cn(
+            "px-6 py-3 font-medium text-sm transition-colors relative",
+            activeTab === 'chat' 
+              ? "text-emerald-600 dark:text-emerald-400" 
+              : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          )}
+        >
+          Live Chat
+          {activeTab === 'chat' && (
+            <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" />
+          )}
+        </button>
+      </div>
+
+      {activeTab === 'scores' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
           {/* Field View (MLB Only) */}
           {isMLB && competition.status?.type?.state === 'in' && (
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-6">
@@ -674,6 +709,11 @@ export const GameDetailsPage = () => {
           )}
         </div>
       </div>
+      ) : (
+        <div className="w-full max-w-3xl mx-auto">
+          <ChatRoom gameId={id || ''} />
+        </div>
+      )}
     </div>
   );
 };
