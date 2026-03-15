@@ -19,7 +19,7 @@ export const Navbar = ({ toggleSidebar, toggleSearch }: NavbarProps) => {
             <Menu className="w-6 h-6" />
           </button>
           <h1 className="text-xl font-bold tracking-tight">
-            Sports<span className="text-emerald-500">Central</span>
+            Crazy<span className="text-emerald-500">Scores</span>
             <span className="ml-2 text-xs font-mono text-slate-400 uppercase border border-slate-700 px-2 py-0.5 rounded-full">
               {league.toUpperCase()}
             </span>
