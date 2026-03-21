@@ -15,13 +15,16 @@ export const Standings = () => {
 
   useEffect(() => {
     const fetchStandings = async () => {
-      setLoading(true);
+      // Only set loading true on first fetch
+      if (groups.length === 0) setLoading(true);
       const data = await getStandings(sport, league);
       setGroups(data);
       setLoading(false);
     };
 
     fetchStandings();
+    const interval = setInterval(fetchStandings, 3000); // Poll every 3s
+    return () => clearInterval(interval);
   }, [sport, league]);
 
   const toggleFavorite = (e: React.MouseEvent, team: Standing['team']) => {

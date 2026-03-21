@@ -10,10 +10,10 @@ export const getMlbScores = async (date?: string): Promise<Score[]> => {
       const year = date.substring(0, 4);
       const month = date.substring(4, 6);
       const day = date.substring(6, 8);
-      dateParam = `&date=${year}-${month}-${day}`;
+      dateParam = `?date=${year}-${month}-${day}`;
     }
 
-    const response = await fetch(`${MLB_STATS_API_BASE}/schedule?sportId=1&hydrate=team,linescore${dateParam}`);
+    const response = await fetch(`/api/mlb/scores${dateParam}`);
     if (!response.ok) throw new Error("Failed to fetch MLB scores");
     const data = await response.json();
 
@@ -131,7 +131,7 @@ export const getMlbScores = async (date?: string): Promise<Score[]> => {
 
 export const getMlbStandings = async (): Promise<StandingsGroup[]> => {
   try {
-    const response = await fetch(`${MLB_STATS_API_BASE}/standings?leagueId=103,104`);
+    const response = await fetch(`/api/mlb/standings`);
     if (!response.ok) throw new Error("Failed to fetch MLB standings");
     const data = await response.json();
 

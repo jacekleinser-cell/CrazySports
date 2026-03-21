@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Send, User } from 'lucide-react';
+import { Send, User as UserIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { useAuth } from '../context/AuthContext';
 
 interface Message {
   id: number;
@@ -17,24 +18,12 @@ interface ChatRoomProps {
 }
 
 export const ChatRoom = ({ gameId }: ChatRoomProps) => {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  const [username, setUsername] = useState(() => localStorage.getItem('chat_username') || `User${Math.floor(Math.random() * 10000)}`);
-  const [userId] = useState(() => {
-    let id = localStorage.getItem('chat_userid');
-    if (!id) {
-      id = Math.random().toString(36).substring(2, 15);
-      localStorage.setItem('chat_userid', id);
-    }
-    return id;
-  });
   
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    localStorage.setItem('chat_username', username);
-  }, [username]);
 
   useEffect(() => {
     // Connect to Socket.IO server
@@ -53,11 +42,25 @@ export const ChatRoom = ({ gameId }: ChatRoomProps) => {
       scrollToBottom();
     });
 
+    socket.on('messages_cleaned', () => {
+      // Re-request messages from server to get the cleaned list
+      socket.emit('join_game', gameId);
+    });
+
     return () => {
       socket.emit('leave_game', gameId);
       socket.disconnect();
     };
   }, [gameId]);
+
+  // Local cleanup interval to keep UI fresh
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const fiveMinsAgo = Date.now() - 5 * 60 * 1000;
+      setMessages(prev => prev.filter(msg => new Date(msg.timestamp).getTime() > fiveMinsAgo));
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -67,12 +70,12 @@ export const ChatRoom = ({ gameId }: ChatRoomProps) => {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || !socketRef.current) return;
+    if (!inputText.trim() || !socketRef.current || !user) return;
 
     socketRef.current.emit('send_message', {
       gameId,
-      userId,
-      username,
+      userId: user.id,
+      username: user.username,
       text: inputText.trim()
     });
 
@@ -86,16 +89,9 @@ export const ChatRoom = ({ gameId }: ChatRoomProps) => {
         <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
           Live Game Chat
         </h3>
-        <div className="flex items-center gap-2">
-          <User className="w-4 h-4 text-slate-500" />
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="text-sm bg-transparent border-b border-slate-300 dark:border-slate-600 focus:border-emerald-500 outline-none px-1 w-24 text-slate-700 dark:text-slate-300"
-            placeholder="Username"
-            maxLength={20}
-          />
+        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+          <UserIcon className="w-4 h-4" />
+          <span className="font-medium">{user?.username}</span>
         </div>
       </div>
 
@@ -107,7 +103,7 @@ export const ChatRoom = ({ gameId }: ChatRoomProps) => {
           </div>
         ) : (
           messages.map((msg) => {
-            const isMe = msg.userId === userId;
+            const isMe = msg.userId === user?.id;
             return (
               <div key={msg.id} className={cn("flex flex-col max-w-[80%]", isMe ? "ml-auto items-end" : "items-start")}>
                 <span className="text-xs text-slate-500 mb-1 px-1">{msg.username}</span>

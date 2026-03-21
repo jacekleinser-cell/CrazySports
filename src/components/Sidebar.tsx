@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { X, Trophy, Newspaper, Activity, Settings, ChevronDown, ChevronUp, Star, Trash2, User, BarChart2, Search } from 'lucide-react';
+import { X, Trophy, Newspaper, Activity, Settings, ChevronDown, ChevronUp, Star, Trash2, User, BarChart2, Search, LogOut } from 'lucide-react';
 import { useSports, Sport, League } from '../context/SportsContext';
 import { useFavorites } from '../context/FavoritesContext';
+import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -18,6 +19,7 @@ export const Sidebar = ({ isOpen, onClose, onOpenSearch }: SidebarProps) => {
     mainSport, setMainSportPreference,
   } = useSports();
   const { favorites, removeFavorite, favoritePlayers, removeFavoritePlayer } = useFavorites();
+  const { user, logout } = useAuth();
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -232,12 +234,30 @@ export const Sidebar = ({ isOpen, onClose, onOpenSearch }: SidebarProps) => {
                 </button>
               </div>
 
-              <div className="pt-6 border-t border-slate-800">
+              <div className="pt-6 border-t border-slate-800 space-y-2">
+                <div className="px-3 py-2 mb-2 flex items-center gap-3 text-sm text-slate-300">
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold">
+                    {user?.username?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-medium text-white">{user?.username}</span>
+                    <span className="text-xs text-slate-500 truncate max-w-[150px]">{user?.email}</span>
+                  </div>
+                </div>
                 <button 
                   onClick={() => handleNavigation('/settings')}
                   className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-white flex items-center gap-3"
                 >
                   <Settings className="w-4 h-4" /> Settings
+                </button>
+                <button 
+                  onClick={() => {
+                    logout();
+                    onClose();
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-red-400 hover:bg-red-400/10 flex items-center gap-3 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" /> Sign Out
                 </button>
               </div>
             </div>

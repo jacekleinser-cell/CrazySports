@@ -11,13 +11,15 @@ export const NewsFeed = () => {
 
   useEffect(() => {
     const fetchNews = async () => {
-      setLoading(true);
+      if (news.length === 0) setLoading(true);
       const data = await getNews(sport, league);
       setNews(data);
       setLoading(false);
     };
 
     fetchNews();
+    const interval = setInterval(fetchNews, 3000); // Poll every 3s
+    return () => clearInterval(interval);
   }, [sport, league]);
 
   if (loading) {

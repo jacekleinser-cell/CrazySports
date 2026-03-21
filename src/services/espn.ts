@@ -203,7 +203,7 @@ export const getGameSummary = async (sport: string, league: string, eventId: str
     let finalEventId = eventId;
     
     // If it's MLB and eventId looks like an MLB Stats API gamePk (usually 6-7 digits)
-    if (league === 'mlb' && eventId.length < 8) {
+    if (league === 'mlb' && eventId && eventId.length < 8) {
       try {
         const mlbRes = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${eventId}/feed/live`);
         if (mlbRes.ok) {
@@ -212,34 +212,36 @@ export const getGameSummary = async (sport: string, league: string, eventId: str
           
           if (dateTimeStr) {
             const gameDate = new Date(dateTimeStr);
-            // Approximate EST by subtracting 4 hours from UTC
-            gameDate.setHours(gameDate.getHours() - 4);
-            const year = gameDate.getFullYear();
-            const month = String(gameDate.getMonth() + 1).padStart(2, '0');
-            const day = String(gameDate.getDate()).padStart(2, '0');
-            const dateStr = `${year}${month}${day}`;
-            
-            const homeTeamName = mlbData.gameData?.teams?.home?.name;
-            
-            if (homeTeamName) {
-              const espnRes = await fetch(`${BASE_URL}/${sport}/${league}/scoreboard?dates=${dateStr}`);
-              if (espnRes.ok) {
-                const espnData = await espnRes.json();
-                const espnGame = espnData.events?.find((e: any) => 
-                  e.competitions?.[0]?.competitors?.some((c: any) => 
-                    c.homeAway === 'home' && 
-                    (c.team.displayName === homeTeamName || c.team.name === homeTeamName || homeTeamName.includes(c.team.name))
-                  )
-                );
-                if (espnGame) {
-                  finalEventId = espnGame.id;
+            if (!isNaN(gameDate.getTime())) {
+              // Approximate EST by subtracting 4 hours from UTC
+              gameDate.setHours(gameDate.getHours() - 4);
+              const year = gameDate.getFullYear();
+              const month = String(gameDate.getMonth() + 1).padStart(2, '0');
+              const day = String(gameDate.getDate()).padStart(2, '0');
+              const dateStr = `${year}${month}${day}`;
+              
+              const homeTeamName = mlbData.gameData?.teams?.home?.name;
+              
+              if (homeTeamName) {
+                const espnRes = await fetch(`${BASE_URL}/${sport}/${league}/scoreboard?dates=${dateStr}`);
+                if (espnRes.ok) {
+                  const espnData = await espnRes.json();
+                  const espnGame = espnData.events?.find((e: any) => 
+                    e.competitions?.[0]?.competitors?.some((c: any) => 
+                      c.homeAway === 'home' && 
+                      (c.team.displayName === homeTeamName || c.team.name === homeTeamName || homeTeamName.includes(c.team.name))
+                    )
+                  );
+                  if (espnGame) {
+                    finalEventId = espnGame.id;
+                  }
                 }
               }
             }
           }
         }
       } catch (err) {
-        console.warn("Failed to map MLB gamePk to ESPN eventId:", err);
+        console.warn(`Failed to map MLB gamePk (${eventId}) to ESPN eventId:`, err);
       }
     }
 

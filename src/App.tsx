@@ -50,27 +50,52 @@ function Layout({ children }: { children: React.ReactNode }) {
 import { FavoritesProvider } from './context/FavoritesContext';
 import { NotificationManager } from './components/NotificationManager';
 import { Toaster } from 'sonner';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthScreen } from './components/AuthScreen';
+import { Loader2 } from 'lucide-react';
+
+function AppContent() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthScreen />;
+  }
+
+  return (
+    <Router>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<ScoresPage />} />
+          <Route path="/scores" element={<ScoresPage />} />
+          <Route path="/standings" element={<StandingsPage />} />
+          <Route path="/stats" element={<StatsPage />} />
+          <Route path="/news" element={<NewsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/game/:sport/:league/:id" element={<GameDetailsPage />} />
+        </Routes>
+        <NotificationManager />
+        <Toaster theme="dark" position="bottom-right" />
+      </Layout>
+    </Router>
+  );
+}
 
 export default function App() {
   return (
-    <SportsProvider>
-      <FavoritesProvider>
-        <Router>
-          <Layout>
-            <Routes>
-              <Route path="/" element={<ScoresPage />} />
-              <Route path="/scores" element={<ScoresPage />} />
-              <Route path="/standings" element={<StandingsPage />} />
-              <Route path="/stats" element={<StatsPage />} />
-              <Route path="/news" element={<NewsPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/game/:sport/:league/:id" element={<GameDetailsPage />} />
-            </Routes>
-            <NotificationManager />
-            <Toaster theme="dark" position="bottom-right" />
-          </Layout>
-        </Router>
-      </FavoritesProvider>
-    </SportsProvider>
+    <AuthProvider>
+      <SportsProvider>
+        <FavoritesProvider>
+          <AppContent />
+        </FavoritesProvider>
+      </SportsProvider>
+    </AuthProvider>
   );
 }

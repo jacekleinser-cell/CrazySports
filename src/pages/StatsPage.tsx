@@ -22,13 +22,15 @@ export const StatsPage = () => {
 
   useEffect(() => {
     const fetchLeaders = async () => {
-      setLoading(true);
+      if (leaders.length === 0) setLoading(true);
       const data = await getLeaders(sport, league, statType, seasonType);
       setLeaders(data);
       setLoading(false);
     };
 
     fetchLeaders();
+    const interval = setInterval(fetchLeaders, 3000); // Poll every 3s
+    return () => clearInterval(interval);
   }, [sport, league, statType, seasonType]);
 
   const handleLeagueChange = (s: Sport, l: League) => {
