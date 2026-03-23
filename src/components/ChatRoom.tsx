@@ -26,31 +26,40 @@ export const ChatRoom = ({ gameId }: ChatRoomProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Connect to Socket.IO server
-    const socket = io();
-    socketRef.current = socket;
+    // Connect to Socket.IO server only if not on file:// protocol
+    if (window.location.protocol === 'file:') {
+      console.warn("Socket.IO disabled on file:// protocol");
+      return;
+    }
 
-    socket.emit('join_game', gameId);
+    try {
+      const socket = io();
+      socketRef.current = socket;
 
-    socket.on('previous_messages', (msgs: Message[]) => {
-      setMessages(msgs);
-      scrollToBottom();
-    });
-
-    socket.on('receive_message', (msg: Message) => {
-      setMessages((prev) => [...prev, msg]);
-      scrollToBottom();
-    });
-
-    socket.on('messages_cleaned', () => {
-      // Re-request messages from server to get the cleaned list
       socket.emit('join_game', gameId);
-    });
 
-    return () => {
-      socket.emit('leave_game', gameId);
-      socket.disconnect();
-    };
+      socket.on('previous_messages', (msgs: Message[]) => {
+        setMessages(msgs);
+        scrollToBottom();
+      });
+
+      socket.on('receive_message', (msg: Message) => {
+        setMessages((prev) => [...prev, msg]);
+        scrollToBottom();
+      });
+
+      socket.on('messages_cleaned', () => {
+        // Re-request messages from server to get the cleaned list
+        socket.emit('join_game', gameId);
+      });
+
+      return () => {
+        socket.emit('leave_game', gameId);
+        socket.disconnect();
+      };
+    } catch (err) {
+      console.error("Socket.IO connection failed:", err);
+    }
   }, [gameId]);
 
   // Local cleanup interval to keep UI fresh

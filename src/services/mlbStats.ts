@@ -13,7 +13,7 @@ export const getMlbScores = async (date?: string): Promise<Score[]> => {
       dateParam = `?date=${year}-${month}-${day}`;
     }
 
-    const response = await fetch(`/api/mlb/scores${dateParam}`);
+    const response = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&hydrate=team,linescore${dateParam}`);
     if (!response.ok) throw new Error("Failed to fetch MLB scores");
     const data = await response.json();
 
@@ -131,7 +131,7 @@ export const getMlbScores = async (date?: string): Promise<Score[]> => {
 
 export const getMlbStandings = async (): Promise<StandingsGroup[]> => {
   try {
-    const response = await fetch(`/api/mlb/standings`);
+    const response = await fetch(`https://statsapi.mlb.com/api/v1/standings?leagueId=103,104`);
     if (!response.ok) throw new Error("Failed to fetch MLB standings");
     const data = await response.json();
 

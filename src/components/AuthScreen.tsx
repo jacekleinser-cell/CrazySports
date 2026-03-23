@@ -20,21 +20,20 @@ export const AuthScreen = () => {
     setError('');
     
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim() })
-      });
+      // Client-side only login
+      const fakeToken = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const user = {
+        id: `user_${Date.now()}`,
+        username: username.trim(),
+        email: `${username.trim().toLowerCase().replace(/\s+/g, '')}@example.com`
+      };
       
-      const data = await res.json();
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      if (res.ok) {
-        login(data.token, data.user);
-      } else {
-        setError(data.error || 'Failed to login');
-      }
+      login(fakeToken, user);
     } catch (err) {
-      setError('Network error. Please try again.');
+      setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }

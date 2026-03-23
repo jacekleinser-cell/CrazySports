@@ -29,13 +29,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       try {
-        const res = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data.user);
+        // Client-side only verification
+        const storedUser = localStorage.getItem('auth_user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
         } else {
           setToken(null);
           localStorage.removeItem('auth_token');
@@ -54,12 +51,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(newToken);
     setUser(newUser);
     localStorage.setItem('auth_token', newToken);
+    localStorage.setItem('auth_user', JSON.stringify(newUser));
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
   };
 
   return (
