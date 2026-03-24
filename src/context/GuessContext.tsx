@@ -72,7 +72,7 @@ export const GuessProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       const won = guess.teamId === winningTeamId;
       if (won) {
-        let pointsEarned = 10; // 10 points for picking the winner
+        let pointsEarned = 500; // 500 points for picking the winner
         
         // Bonus points for exact score prediction
         if (
@@ -82,9 +82,9 @@ export const GuessProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           actualAwayScore !== undefined
         ) {
           if (guess.predictedHomeScore === actualHomeScore && guess.predictedAwayScore === actualAwayScore) {
-            pointsEarned += 50; // 50 bonus points for exact score
+            pointsEarned += 500; // 500 bonus points for exact score
           } else if (Math.abs(guess.predictedHomeScore - actualHomeScore) <= 3 && Math.abs(guess.predictedAwayScore - actualAwayScore) <= 3) {
-            pointsEarned += 10; // 10 bonus points for being close (within 3 points)
+            pointsEarned += 100; // 100 bonus points for being close (within 3 points)
           }
         }
         

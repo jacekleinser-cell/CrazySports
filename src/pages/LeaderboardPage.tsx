@@ -19,7 +19,7 @@ export const LeaderboardPage = () => {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const res = await fetch('/api/leaderboard');
+        const res = await fetch(`${window.location.origin}/api/leaderboard`);
         if (res.ok) {
           const data = await res.json();
           setUsers(data.leaderboard);

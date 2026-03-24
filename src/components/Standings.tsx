@@ -5,8 +5,7 @@ import { getStandings, Standing, StandingsGroup } from '../services/espn';
 import { cn } from '../lib/utils';
 import { ChevronRight, Star } from 'lucide-react';
 
-export const Standings = () => {
-  const { sport, league } = useSports();
+export const Standings = ({ sport, league }: { sport: Sport; league: League }) => {
   const { addFavorite, removeFavorite, isFavorite } = useFavorites();
   const [groups, setGroups] = useState<StandingsGroup[]>([]);
   const [loading, setLoading] = useState(true);
