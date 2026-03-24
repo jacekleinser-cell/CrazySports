@@ -10,6 +10,8 @@ export interface Score {
   name: string;
   shortName: string;
   status: {
+    period: number;
+    clock: number;
     type: {
       id: string;
       name: string;
@@ -201,6 +203,7 @@ export const getStandings = async (sport: string, league: string): Promise<Stand
 export const getGameSummary = async (sport: string, league: string, eventId: string) => {
   try {
     let finalEventId = eventId;
+    let fallbackMlbData: any = null;
     
     // If it's MLB and eventId looks like an MLB Stats API gamePk (usually 6-7 digits)
     if (league === 'mlb' && eventId && eventId.length < 8) {
@@ -208,6 +211,7 @@ export const getGameSummary = async (sport: string, league: string, eventId: str
         const mlbRes = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${eventId}/feed/live`);
         if (mlbRes.ok) {
           const mlbData = await mlbRes.json();
+          fallbackMlbData = mlbData;
           const dateTimeStr = mlbData.gameData?.datetime?.dateTime;
           
           if (dateTimeStr) {
@@ -246,11 +250,64 @@ export const getGameSummary = async (sport: string, league: string, eventId: str
     }
 
     const response = await fetch(`${BASE_URL}/${sport}/${league}/summary?event=${finalEventId}`);
-    if (!response.ok) throw new Error("Failed to fetch game summary");
+    if (!response.ok) {
+      if (fallbackMlbData) {
+        const home = fallbackMlbData.gameData?.teams?.home;
+        const away = fallbackMlbData.gameData?.teams?.away;
+        const linescore = fallbackMlbData.liveData?.linescore;
+        
+        if (home && away && linescore) {
+          return {
+            header: {
+              competitions: [
+                {
+                  id: eventId,
+                  competitors: [
+                    {
+                      id: home.id?.toString(),
+                      homeAway: 'home',
+                      team: {
+                        id: home.id?.toString(),
+                        name: home.name,
+                        displayName: home.teamName,
+                        abbreviation: home.abbreviation || home.name?.substring(0, 3).toUpperCase(),
+                        logo: `https://a.espncdn.com/i/teamlogos/mlb/500/${(home.abbreviation || home.name?.substring(0, 3) || '').toLowerCase()}.png`
+                      },
+                      score: linescore.teams?.home?.runs?.toString() || '0'
+                    },
+                    {
+                      id: away.id?.toString(),
+                      homeAway: 'away',
+                      team: {
+                        id: away.id?.toString(),
+                        name: away.name,
+                        displayName: away.teamName,
+                        abbreviation: away.abbreviation || away.name?.substring(0, 3).toUpperCase(),
+                        logo: `https://a.espncdn.com/i/teamlogos/mlb/500/${(away.abbreviation || away.name?.substring(0, 3) || '').toLowerCase()}.png`
+                      },
+                      score: linescore.teams?.away?.runs?.toString() || '0'
+                    }
+                  ],
+                  status: {
+                    type: {
+                      state: fallbackMlbData.gameData?.status?.statusCode === 'F' || fallbackMlbData.gameData?.status?.statusCode === 'O' ? 'post' : fallbackMlbData.gameData?.status?.statusCode === 'I' || fallbackMlbData.gameData?.status?.statusCode === 'PW' ? 'in' : 'pre',
+                      detail: fallbackMlbData.gameData?.status?.detailedState
+                    }
+                  }
+                }
+              ]
+            },
+            boxscore: { teams: [] },
+            plays: []
+          };
+        }
+      }
+      throw new Error("Failed to fetch game summary");
+    }
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error("Error fetching game summary:", error);
+    console.warn("Failed to fetch game summary:", error);
     return null;
   }
 };
@@ -271,7 +328,13 @@ export const search = async (query: string, type?: 'player' | 'team') => {
   }
 };
 
-export const getLeaders = async (sport: string, league: string, type: 'offense' | 'defense' = 'offense', seasonType: number = 2): Promise<any[]> => {
+export const getLeaders = async (
+  sport: string, 
+  league: string, 
+  statCategory: string = '', 
+  statName: string = '', 
+  seasonType: number = 2
+): Promise<any[]> => {
   try {
     // Preseason/Spring Training (seasonType=1) is notoriously unreliable on this endpoint for some leagues.
     // We'll try to fetch, but if it fails with 500, we'll just return empty array gracefully.
@@ -291,51 +354,35 @@ export const getLeaders = async (sport: string, league: string, type: 'offense' 
     const rootCategories = data.categories || [];
     const athletes = data.athletes || [];
     
-    let categoryName = 'offensive';
-    let targetStatName = '';
+    let categoryName = statCategory;
+    let targetStatName = statName;
     let statLabel = 'Stats';
 
-    if (league === 'nba') {
-       if (type === 'defense') {
-         categoryName = 'defensive';
-         targetStatName = 'avgSteals';
-         statLabel = 'Steals Per Game';
-       } else {
-         categoryName = 'offensive';
-         targetStatName = 'avgPoints';
-         statLabel = 'Points Per Game';
-       }
-    } else if (league === 'nfl') {
-       if (type === 'defense') {
-         categoryName = 'defensive';
-         targetStatName = 'sacks';
-         statLabel = 'Sacks';
-       } else {
-         categoryName = 'passing'; // Default to passing for offense
-         targetStatName = 'passingYards';
-         statLabel = 'Passing Yards';
-       }
-    } else if (league === 'mlb') {
-       if (type === 'defense') {
-         categoryName = 'pitching';
-         targetStatName = 'strikeouts';
-         statLabel = 'Strikeouts';
-       } else {
-         categoryName = 'offensive';
-         targetStatName = 'avg';
-         statLabel = 'Batting Average';
-       }
-    } else if (league === 'nhl') {
-       if (type === 'defense') {
-          // The 'defensive' category in this API is for Goalies (Saves, GAA, etc.)
-          categoryName = 'defensive';
-          targetStatName = 'saves';
-          statLabel = 'Saves';
-       } else {
-          categoryName = 'offensive';
-          targetStatName = 'points';
-          statLabel = 'Points Per Game';
-       }
+    if (!categoryName || !targetStatName) {
+      if (league === 'nba') {
+        categoryName = 'offensive';
+        targetStatName = 'avgPoints';
+        statLabel = 'Points Per Game';
+      } else if (league === 'nfl') {
+        categoryName = 'passing';
+        targetStatName = 'passingYards';
+        statLabel = 'Passing Yards';
+      } else if (league === 'mlb') {
+        categoryName = 'batting';
+        targetStatName = 'homeRuns';
+        statLabel = 'Home Runs';
+      } else if (league === 'nhl') {
+        categoryName = 'offensive';
+        targetStatName = 'points';
+        statLabel = 'Points';
+      }
+    }
+
+    // Special handling for NHL Points Per Game
+    const isNhlPpg = league === 'nhl' && targetStatName === 'pointsPerGame';
+    if (isNhlPpg) {
+      targetStatName = 'points';
+      statLabel = 'Points Per Game';
     }
 
     // Find the index of the target stat
@@ -347,7 +394,7 @@ export const getLeaders = async (sport: string, league: string, type: 'offense' 
       if (idx !== -1) {
         statIndex = idx;
         // Use the API's display name if available, otherwise fallback to our default
-        if (targetCategory.displayNames && targetCategory.displayNames[idx] && league !== 'nhl') {
+        if (targetCategory.displayNames && targetCategory.displayNames[idx] && !isNhlPpg) {
            statLabel = targetCategory.displayNames[idx];
         }
       } else {
@@ -358,7 +405,7 @@ export const getLeaders = async (sport: string, league: string, type: 'offense' 
 
     // Special handling for NHL PPG calculation
     let gamesIndex = -1;
-    if (league === 'nhl' && type === 'offense') {
+    if (isNhlPpg) {
         const generalCat = rootCategories.find((c: any) => c.name === 'general');
         if (generalCat && generalCat.names) {
             gamesIndex = generalCat.names.indexOf('games');
@@ -378,7 +425,7 @@ export const getLeaders = async (sport: string, league: string, type: 'offense' 
       if (value === 0 && (targetStatName === 'points' || targetStatName === 'saves')) return null;
 
       // Calculate PPG for NHL Offense
-      if (league === 'nhl' && type === 'offense' && gamesIndex !== -1) {
+      if (isNhlPpg && gamesIndex !== -1) {
           const generalCategory = entry.categories?.find((c: any) => c.name === 'general');
           const games = generalCategory?.values?.[gamesIndex] || 0;
           

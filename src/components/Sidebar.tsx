@@ -3,7 +3,8 @@ import { X, Trophy, Newspaper, Activity, Settings, ChevronDown, ChevronUp, Star,
 import { useSports, Sport, League } from '../context/SportsContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { useAuth } from '../context/AuthContext';
-import { cn } from '../lib/utils';
+import { useGuesses } from '../context/GuessContext';
+import { cn, getRank } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -20,6 +21,7 @@ export const Sidebar = ({ isOpen, onClose, onOpenSearch }: SidebarProps) => {
   } = useSports();
   const { favorites, removeFavorite, favoritePlayers, removeFavoritePlayer } = useFavorites();
   const { user, logout } = useAuth();
+  const { score } = useGuesses();
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -224,6 +226,24 @@ export const Sidebar = ({ isOpen, onClose, onOpenSearch }: SidebarProps) => {
                   <BarChart2 className="w-4 h-4" /> Stats
                 </button>
                 <button 
+                  onClick={() => handleNavigation('/guess')}
+                  className={cn(
+                    "w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-3",
+                    location.pathname === '/guess' ? "bg-slate-800 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                  )}
+                >
+                  <Star className="w-4 h-4" /> Guess
+                </button>
+                <button 
+                  onClick={() => handleNavigation('/leaderboard')}
+                  className={cn(
+                    "w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-3",
+                    location.pathname === '/leaderboard' ? "bg-slate-800 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                  )}
+                >
+                  <Trophy className="w-4 h-4" /> Leaderboard
+                </button>
+                <button 
                   onClick={() => handleNavigation('/news')}
                   className={cn(
                     "w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-3",
@@ -241,7 +261,12 @@ export const Sidebar = ({ isOpen, onClose, onOpenSearch }: SidebarProps) => {
                   </div>
                   <div className="flex flex-col">
                     <span className="font-medium text-white">{user?.username}</span>
-                    <span className="text-xs text-slate-500 truncate max-w-[150px]">{user?.email}</span>
+                    <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
+                      <Star className="w-3 h-3 text-emerald-500 fill-emerald-500" />
+                      <span>{getRank(score).name}</span>
+                      <span className="text-slate-600">•</span>
+                      <span className="font-mono text-emerald-400">{score} pts</span>
+                    </div>
                   </div>
                 </div>
                 <button 

@@ -14,8 +14,13 @@ import { StandingsPage } from './pages/StandingsPage';
 import { NewsPage } from './pages/NewsPage';
 import { SchedulePage } from './pages/SchedulePage';
 import { GameDetailsPage } from './pages/GameDetailsPage';
+import { TeamDetailsPage } from './pages/TeamDetailsPage';
+import { PlayerDetailsPage } from './pages/PlayerDetailsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { StatsPage } from './pages/StatsPage';
+import { GuessPage } from './pages/GuessPage';
+import { LeaderboardPage } from './pages/LeaderboardPage';
+import { GuessProvider } from './context/GuessContext';
 
 function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -77,9 +82,13 @@ function AppContent() {
           <Route path="/scores" element={<ScoresPage />} />
           <Route path="/standings" element={<StandingsPage />} />
           <Route path="/stats" element={<StatsPage />} />
+          <Route path="/guess" element={<GuessPage />} />
+          <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/news" element={<NewsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/game/:sport/:league/:id" element={<GameDetailsPage />} />
+          <Route path="/team/:sport/:league/:id" element={<TeamDetailsPage />} />
+          <Route path="/player/:sport/:league/:id" element={<PlayerDetailsPage />} />
         </Routes>
         <NotificationManager />
         <Toaster theme="dark" position="bottom-right" />
@@ -93,7 +102,9 @@ export default function App() {
     <AuthProvider>
       <SportsProvider>
         <FavoritesProvider>
-          <AppContent />
+          <GuessProvider>
+            <AppContent />
+          </GuessProvider>
         </FavoritesProvider>
       </SportsProvider>
     </AuthProvider>

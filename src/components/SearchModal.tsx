@@ -5,6 +5,7 @@ import { search, getStandings } from '../services/espn';
 import { useFavorites } from '../context/FavoritesContext';
 import { useSports } from '../context/SportsContext';
 import { cn } from '../lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
   const [loading, setLoading] = useState(false);
   const { addFavorite, removeFavorite, isFavorite, addFavoritePlayer, removeFavoritePlayer, isFavoritePlayer } = useFavorites();
   const { sport, league } = useSports();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (isOpen && query.length === 0) {
@@ -164,7 +166,10 @@ export const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
                           <div 
                             key={`suggested-team-${team.id}`} 
                             className="group flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all cursor-pointer border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
-                            onClick={(e) => handleFavoriteTeam(e, team)}
+                            onClick={() => {
+                              navigate(`/team/${sport}/${team.league?.toLowerCase() || league}/${team.id}`);
+                              onClose();
+                            }}
                           >
                             <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center p-1 shrink-0">
                               {team.logos?.[0]?.href ? (
@@ -216,7 +221,10 @@ export const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
                             <div 
                               key={`team-${team.id}`} 
                               className="group flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all cursor-pointer border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
-                              onClick={(e) => handleFavoriteTeam(e, team)}
+                              onClick={() => {
+                                navigate(`/team/${sport}/${team.league?.toLowerCase() || league}/${team.id}`);
+                                onClose();
+                              }}
                             >
                               <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center p-1 shrink-0">
                                 {team.logos?.[0]?.href ? (
@@ -267,7 +275,10 @@ export const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
                             <div 
                               key={`player-${player.id}`} 
                               className="group flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all cursor-pointer border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
-                              onClick={(e) => handleFavoritePlayer(e, player)}
+                              onClick={() => {
+                                navigate(`/player/${sport}/${league}/${player.id}`);
+                                onClose();
+                              }}
                             >
                               <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700">
                                 {player.headshot?.href || player.images?.[0]?.url ? (

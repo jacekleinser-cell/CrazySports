@@ -11,6 +11,8 @@ import { useFavorites } from '../context/FavoritesContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChatRoom } from '../components/ChatRoom';
 
+import { KalshiProbability } from '../components/KalshiProbability';
+
 export const GameDetailsPage = () => {
   const { sport: urlSport, league: urlLeague, id } = useParams();
   const { sport: contextSport, league: contextLeague } = useSports();
@@ -368,6 +370,10 @@ export const GameDetailsPage = () => {
             <div className="text-sm text-slate-400 dark:text-slate-500">
               {competition.venue?.fullName}
             </div>
+            <KalshiProbability 
+              homeTeam={homeTeam?.abbreviation || homeTeam?.name || 'Home'} 
+              awayTeam={awayTeam?.abbreviation || awayTeam?.name || 'Away'} 
+            />
           </div>
 
           {/* Home Team (Right) */}

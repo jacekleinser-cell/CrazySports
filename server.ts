@@ -25,7 +25,8 @@ db.exec(`
     id TEXT PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     username TEXT NOT NULL,
-    token TEXT
+    token TEXT,
+    score INTEGER DEFAULT 0
   );
   
   CREATE TABLE IF NOT EXISTS auth_codes (
@@ -36,8 +37,17 @@ db.exec(`
   );
 `);
 
+// Add score column if it doesn't exist (for existing databases)
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN score INTEGER DEFAULT 0;`);
+} catch (e) {
+  // Column already exists
+}
+
 const insertMessage = db.prepare("INSERT INTO messages (gameId, userId, username, text) VALUES (?, ?, ?, ?)");
 const getMessages = db.prepare("SELECT * FROM messages WHERE gameId = ? ORDER BY timestamp ASC LIMIT 100");
+const updateUserScore = db.prepare("UPDATE users SET score = ? WHERE id = ?");
+const getLeaderboard = db.prepare("SELECT id, username, score FROM users ORDER BY score DESC LIMIT 50");
 
 async function startServer() {
   const app = express();
@@ -157,11 +167,38 @@ async function startServer() {
     if (!token) return res.status(401).json({ error: "No token provided" });
 
     try {
-      const user = db.prepare(`SELECT id, email, username FROM users WHERE token = ?`).get(token);
+      const user = db.prepare(`SELECT id, email, username, score FROM users WHERE token = ?`).get(token);
       if (!user) return res.status(401).json({ error: "Invalid token" });
       res.json({ user });
     } catch (err) {
       res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
+  app.get("/api/leaderboard", (req, res) => {
+    try {
+      const leaderboard = getLeaderboard.all();
+      res.json({ leaderboard });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch leaderboard" });
+    }
+  });
+
+  app.post("/api/score", (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: "No token provided" });
+
+    const { score } = req.body;
+    if (typeof score !== 'number') return res.status(400).json({ error: "Score is required and must be a number" });
+
+    try {
+      const user = db.prepare(`SELECT id FROM users WHERE token = ?`).get(token) as any;
+      if (!user) return res.status(401).json({ error: "Invalid token" });
+
+      updateUserScore.run(score, user.id);
+      res.json({ success: true, score });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to update score" });
     }
   });
 

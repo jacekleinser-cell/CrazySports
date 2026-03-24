@@ -5,12 +5,75 @@ import { cn } from '../lib/utils';
 import { User, Trophy, Star } from 'lucide-react';
 import { useFavorites } from '../context/FavoritesContext';
 
+const STATS_CONFIG: Record<League, { label: string; category: string; name: string }[]> = {
+  nba: [
+    { label: 'Points Per Game', category: 'offensive', name: 'avgPoints' },
+    { label: 'Assists Per Game', category: 'offensive', name: 'avgAssists' },
+    { label: 'Rebounds Per Game', category: 'general', name: 'avgRebounds' },
+    { label: 'Steals Per Game', category: 'defensive', name: 'avgSteals' },
+    { label: 'Blocks Per Game', category: 'defensive', name: 'avgBlocks' },
+    { label: 'Field Goal %', category: 'offensive', name: 'fieldGoalPct' },
+    { label: '3-Point FG %', category: 'offensive', name: 'threePointFieldGoalPct' },
+    { label: 'Free Throw %', category: 'offensive', name: 'freeThrowPct' },
+    { label: 'Turnovers Per Game', category: 'offensive', name: 'avgTurnovers' },
+    { label: 'Minutes Per Game', category: 'general', name: 'avgMinutes' },
+  ],
+  nfl: [
+    { label: 'Passing Yards', category: 'passing', name: 'passingYards' },
+    { label: 'Passing Touchdowns', category: 'passing', name: 'passingTouchdowns' },
+    { label: 'Rushing Yards', category: 'rushing', name: 'rushingYards' },
+    { label: 'Rushing Touchdowns', category: 'rushing', name: 'rushingTouchdowns' },
+    { label: 'Receptions', category: 'receiving', name: 'receptions' },
+    { label: 'Receiving Yards', category: 'receiving', name: 'receivingYards' },
+    { label: 'Total Tackles', category: 'defensive', name: 'totalTackles' },
+    { label: 'Sacks', category: 'defensive', name: 'sacks' },
+    { label: 'Interceptions', category: 'defensiveinterceptions', name: 'interceptions' },
+    { label: 'Field Goal %', category: 'kicking', name: 'fieldGoalPct' },
+  ],
+  mlb: [
+    { label: 'Batting Average', category: 'batting', name: 'avg' },
+    { label: 'Home Runs', category: 'batting', name: 'homeRuns' },
+    { label: 'Runs Batted In', category: 'batting', name: 'RBIs' },
+    { label: 'On Base Percentage', category: 'batting', name: 'onBasePct' },
+    { label: 'Slugging Percentage', category: 'batting', name: 'slugAvg' },
+    { label: 'OPS', category: 'batting', name: 'OPS' },
+    { label: 'Earned Run Average', category: 'pitching', name: 'ERA' },
+    { label: 'Wins', category: 'pitching', name: 'wins' },
+    { label: 'Strikeouts', category: 'pitching', name: 'strikeouts' },
+    { label: 'WHIP', category: 'pitching', name: 'WHIP' },
+  ],
+  nhl: [
+    { label: 'Points Per Game', category: 'offensive', name: 'pointsPerGame' },
+    { label: 'Goals', category: 'offensive', name: 'goals' },
+    { label: 'Assists', category: 'offensive', name: 'assists' },
+    { label: 'Plus/Minus', category: 'general', name: 'plusMinus' },
+    { label: 'Shots', category: 'offensive', name: 'shotsTotal' },
+    { label: 'Power Play Goals', category: 'offensive', name: 'powerPlayGoals' },
+    { label: 'Save Percentage', category: 'defensive', name: 'savePct' },
+    { label: 'Goals Against Average', category: 'defensive', name: 'avgGoalsAgainst' },
+    { label: 'Saves', category: 'defensive', name: 'saves' },
+    { label: 'Shutouts', category: 'defensive', name: 'shutouts' },
+  ],
+  'eng.1': [
+    { label: 'Goals', category: 'offensive', name: 'goals' },
+    { label: 'Assists', category: 'offensive', name: 'assists' },
+    { label: 'Shots', category: 'offensive', name: 'shotsTotal' },
+    { label: 'Shots on Target', category: 'offensive', name: 'shotsOnTarget' },
+    { label: 'Passes', category: 'offensive', name: 'passes' },
+    { label: 'Tackles', category: 'defensive', name: 'tackles' },
+    { label: 'Interceptions', category: 'defensive', name: 'interceptions' },
+    { label: 'Yellow Cards', category: 'general', name: 'yellowCards' },
+    { label: 'Red Cards', category: 'general', name: 'redCards' },
+    { label: 'Saves', category: 'defensive', name: 'saves' },
+  ],
+};
+
 export const StatsPage = () => {
   const { sport, league, setSportLeague } = useSports();
   const { isFavoritePlayer, addFavoritePlayer, removeFavoritePlayer } = useFavorites();
   const [leaders, setLeaders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statType, setStatType] = useState<'offense' | 'defense'>('offense');
+  const [selectedStatIndex, setSelectedStatIndex] = useState<number>(0);
   const [seasonType, setSeasonType] = useState<number>(2); // 2 = Regular, 1 = Preseason
 
   const leagues: { name: string; sport: Sport; league: League }[] = [
@@ -18,12 +81,14 @@ export const StatsPage = () => {
     { name: 'NFL', sport: 'football', league: 'nfl' },
     { name: 'MLB', sport: 'baseball', league: 'mlb' },
     { name: 'NHL', sport: 'hockey', league: 'nhl' },
+    { name: 'Premier League', sport: 'soccer', league: 'eng.1' },
   ];
 
   useEffect(() => {
     const fetchLeaders = async () => {
       if (leaders.length === 0) setLoading(true);
-      const data = await getLeaders(sport, league, statType, seasonType);
+      const currentStat = STATS_CONFIG[league][selectedStatIndex] || STATS_CONFIG[league][0];
+      const data = await getLeaders(sport, league, currentStat.category, currentStat.name, seasonType);
       setLeaders(data);
       setLoading(false);
     };
@@ -31,12 +96,12 @@ export const StatsPage = () => {
     fetchLeaders();
     const interval = setInterval(fetchLeaders, 3000); // Poll every 3s
     return () => clearInterval(interval);
-  }, [sport, league, statType, seasonType]);
+  }, [sport, league, selectedStatIndex, seasonType]);
 
   const handleLeagueChange = (s: Sport, l: League) => {
     setSportLeague(s, l);
     // Reset filters when changing league
-    setStatType('offense');
+    setSelectedStatIndex(0);
     setSeasonType(2);
   };
 
@@ -83,28 +148,17 @@ export const StatsPage = () => {
 
         <div className="flex flex-wrap items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
           <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-lg">
-             <button
-               onClick={() => setStatType('offense')}
-               className={cn(
-                 "px-4 py-1.5 rounded-md text-sm font-medium transition-all",
-                 statType === 'offense'
-                   ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                   : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-               )}
+             <select
+               value={selectedStatIndex}
+               onChange={(e) => setSelectedStatIndex(Number(e.target.value))}
+               className="px-4 py-1.5 rounded-md text-sm font-medium transition-all bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm border-none outline-none cursor-pointer"
              >
-               Offense
-             </button>
-             <button
-               onClick={() => setStatType('defense')}
-               className={cn(
-                 "px-4 py-1.5 rounded-md text-sm font-medium transition-all",
-                 statType === 'defense'
-                   ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                   : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-               )}
-             >
-               Defense
-             </button>
+               {STATS_CONFIG[league].map((stat, idx) => (
+                 <option key={idx} value={idx}>
+                   {stat.label}
+                 </option>
+               ))}
+             </select>
           </div>
 
           <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />

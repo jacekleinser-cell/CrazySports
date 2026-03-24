@@ -72,9 +72,10 @@ export const getMlbScores = async (date?: string): Promise<Score[]> => {
         gameState = 'post';
         completed = true;
         shortDetail = 'Final';
-      } else if (game.status.statusCode === 'I') {
+      } else if (game.status.statusCode === 'I' || game.status.statusCode === 'PW') {
         gameState = 'in';
-        shortDetail = `${linescore.inningState === 'Top' ? 'Top' : 'Bot'} ${linescore.currentInningOrdinal || linescore.currentInning}`;
+        const inning = linescore.currentInningOrdinal || linescore.currentInning;
+        shortDetail = inning ? `${linescore.inningState === 'Top' ? 'Top' : 'Bot'} ${inning}` : 'Live';
       }
 
       return {
@@ -83,6 +84,8 @@ export const getMlbScores = async (date?: string): Promise<Score[]> => {
         name: `${awayTeam.team.name} at ${homeTeam.team.name}`,
         shortName: `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`,
         status: {
+          period: linescore.currentInning || 1,
+          clock: 0,
           type: {
             id: game.status.statusCode,
             name: game.status.detailedState,
