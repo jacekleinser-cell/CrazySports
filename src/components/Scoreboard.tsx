@@ -24,6 +24,7 @@ export const Scoreboard = () => {
 
   useEffect(() => {
     const fetchScores = async () => {
+      console.log('Fetching scores for:', sport, league, selectedDate);
       // Don't set loading to true on subsequent polls to avoid flicker
       if (scores.length === 0) setLoading(true);
       const dateStr = format(selectedDate, 'yyyyMMdd');

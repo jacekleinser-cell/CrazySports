@@ -21,6 +21,7 @@ import { StatsPage } from './pages/StatsPage';
 import { GuessPage } from './pages/GuessPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { GuessProvider } from './context/GuessContext';
+import { ChatProvider } from './context/ChatContext';
 
 function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -59,6 +60,24 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthScreen } from './components/AuthScreen';
 import { Loader2 } from 'lucide-react';
 
+export default function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <SportsProvider>
+          <FavoritesProvider>
+            <GuessProvider>
+              <ChatProvider>
+                <AppContent />
+              </ChatProvider>
+            </GuessProvider>
+          </FavoritesProvider>
+        </SportsProvider>
+      </AuthProvider>
+    </Router>
+  );
+}
+
 function AppContent() {
   const { user, loading } = useAuth();
 
@@ -75,38 +94,22 @@ function AppContent() {
   }
 
   return (
-    <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<ScoresPage />} />
-          <Route path="/scores" element={<ScoresPage />} />
-          <Route path="/standings" element={<StandingsPage />} />
-          <Route path="/stats" element={<StatsPage />} />
-          <Route path="/guess" element={<GuessPage />} />
-          <Route path="/leaderboard" element={<LeaderboardPage />} />
-          <Route path="/news" element={<NewsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/game/:sport/:league/:id" element={<GameDetailsPage />} />
-          <Route path="/team/:sport/:league/:id" element={<TeamDetailsPage />} />
-          <Route path="/player/:sport/:league/:id" element={<PlayerDetailsPage />} />
-        </Routes>
-        <NotificationManager />
-        <Toaster theme="dark" position="bottom-right" />
-      </Layout>
-    </Router>
-  );
-}
-
-export default function App() {
-  return (
-    <AuthProvider>
-      <SportsProvider>
-        <FavoritesProvider>
-          <GuessProvider>
-            <AppContent />
-          </GuessProvider>
-        </FavoritesProvider>
-      </SportsProvider>
-    </AuthProvider>
+    <Layout>
+      <Routes>
+        <Route path="/" element={<ScoresPage />} />
+        <Route path="/scores" element={<ScoresPage />} />
+        <Route path="/standings" element={<StandingsPage />} />
+        <Route path="/stats" element={<StatsPage />} />
+        <Route path="/guess" element={<GuessPage />} />
+        <Route path="/leaderboard" element={<LeaderboardPage />} />
+        <Route path="/news" element={<NewsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/game/:sport/:league/:id" element={<GameDetailsPage />} />
+        <Route path="/team/:sport/:league/:id" element={<TeamDetailsPage />} />
+        <Route path="/player/:sport/:league/:id" element={<PlayerDetailsPage />} />
+      </Routes>
+      <NotificationManager />
+      <Toaster theme="dark" position="bottom-right" />
+    </Layout>
   );
 }

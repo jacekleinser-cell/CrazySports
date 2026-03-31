@@ -9,7 +9,8 @@ export const SettingsPage = () => {
   const { 
     theme, toggleTheme, 
     mainSport, setMainSportPreference,
-    notificationsEnabled, toggleNotifications 
+    notificationsEnabled, toggleNotifications,
+    chatNotificationsEnabled, toggleChatNotifications
   } = useSports();
   const { clearFavorites, clearFavoriteTeams } = useFavorites();
   const navigate = useNavigate();
@@ -84,6 +85,30 @@ export const SettingsPage = () => {
                 ))}
               </div>
               <p className="mt-2 text-xs text-slate-500">This sport will be shown by default when you open the app.</p>
+            </div>
+
+            <div className="h-px bg-slate-100 dark:bg-slate-800" />
+
+            {/* Chat Notifications */}
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium text-slate-900 dark:text-white">Chat Notifications</div>
+                <div className="text-sm text-slate-500 dark:text-slate-400">
+                  Get alerts when someone sends a message
+                </div>
+              </div>
+              <button 
+                onClick={toggleChatNotifications}
+                className={cn(
+                  "w-12 h-6 rounded-full relative transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900",
+                  chatNotificationsEnabled ? "bg-emerald-500" : "bg-slate-200 dark:bg-slate-700"
+                )}
+              >
+                <span className={cn(
+                  "absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out shadow-sm",
+                  chatNotificationsEnabled ? "translate-x-6" : "translate-x-0"
+                )} />
+              </button>
             </div>
 
             <div className="h-px bg-slate-100 dark:bg-slate-800" />

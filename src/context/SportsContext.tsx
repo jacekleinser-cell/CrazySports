@@ -14,6 +14,8 @@ interface SportsContextType {
   setMainSportPreference: (sport: Sport, league: League) => void;
   notificationsEnabled: boolean;
   toggleNotifications: () => Promise<void>;
+  chatNotificationsEnabled: boolean;
+  toggleChatNotifications: () => void;
 }
 
 const SportsContext = createContext<SportsContextType | undefined>(undefined);
@@ -32,6 +34,10 @@ export const SportsProvider = ({ children }: { children: ReactNode }) => {
 
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(() => {
     return localStorage.getItem('notificationsEnabled') === 'true';
+  });
+
+  const [chatNotificationsEnabled, setChatNotificationsEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('chatNotificationsEnabled') !== 'false'; // Default to true
   });
 
   // Persist state changes
@@ -56,6 +62,10 @@ export const SportsProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     localStorage.setItem('notificationsEnabled', String(notificationsEnabled));
   }, [notificationsEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('chatNotificationsEnabled', String(chatNotificationsEnabled));
+  }, [chatNotificationsEnabled]);
 
   const setSportLeague = (s: Sport, l: League) => {
     setSport(s);
@@ -101,12 +111,17 @@ export const SportsProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const toggleChatNotifications = () => {
+    setChatNotificationsEnabled(prev => !prev);
+  };
+
   return (
     <SportsContext.Provider value={{ 
       sport, league, setSportLeague,
       theme, toggleTheme,
       mainSport, setMainSportPreference,
-      notificationsEnabled, toggleNotifications
+      notificationsEnabled, toggleNotifications,
+      chatNotificationsEnabled, toggleChatNotifications
     }}>
       {children}
     </SportsContext.Provider>

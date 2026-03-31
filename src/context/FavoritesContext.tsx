@@ -32,6 +32,7 @@ interface FavoritesContextType {
   removeFavorite: (teamId: string, league?: string) => void;
   toggleFavoriteNotification: (teamId: string, league?: string) => void;
   isFavorite: (teamId: string, league?: string) => boolean;
+  isFavoriteTeam: (teamId: string, league?: string) => boolean;
   addFavoritePlayer: (player: FavoritePlayer) => void;
   removeFavoritePlayer: (playerId: string) => void;
   isFavoritePlayer: (playerId: string) => boolean;
@@ -118,6 +119,10 @@ export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
     return favorites.some(f => f.id === teamId && (!league || f.league === league));
   };
 
+  const isFavoriteTeam = (teamId: string, league?: string) => isFavorite(teamId, league);
+  const addFavoriteTeam = (team: Omit<FavoriteTeam, 'notify'>) => addFavorite(team);
+  const removeFavoriteTeam = (teamId: string, league?: string) => removeFavorite(teamId, league);
+
   const addFavoritePlayer = (player: FavoritePlayer) => {
     if (!favoritePlayers.some(p => p.id === player.id)) {
       setFavoritePlayers(prev => [...prev, player]);
@@ -177,6 +182,9 @@ export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
       removeFavorite,
       toggleFavoriteNotification,
       isFavorite,
+      isFavoriteTeam,
+      addFavoriteTeam,
+      removeFavoriteTeam,
       addFavoritePlayer,
       removeFavoritePlayer,
       isFavoritePlayer,

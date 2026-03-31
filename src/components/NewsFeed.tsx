@@ -18,7 +18,7 @@ export const NewsFeed = () => {
     };
 
     fetchNews();
-    const interval = setInterval(fetchNews, 3000); // Poll every 3s
+    const interval = setInterval(fetchNews, 60000); // Poll every 60s
     return () => clearInterval(interval);
   }, [sport, league]);
 

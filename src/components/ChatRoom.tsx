@@ -1,75 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
+import React, { useState, useRef, useEffect } from 'react';
 import { Send, User as UserIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
+import { useChat } from '../context/ChatContext';
 
-interface Message {
-  id: number;
-  gameId: string;
-  userId: string;
-  username: string;
-  text: string;
-  timestamp: string;
-}
-
-interface ChatRoomProps {
-  gameId: string;
-}
-
-export const ChatRoom = ({ gameId }: ChatRoomProps) => {
+export const ChatRoom = () => {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { messages, sendMessage } = useChat();
   const [inputText, setInputText] = useState('');
-  
-  const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Connect to Socket.IO server only if not on file:// protocol
-    if (window.location.protocol === 'file:') {
-      console.warn("Socket.IO disabled on file:// protocol");
-      return;
-    }
-
-    try {
-      const socket = io();
-      socketRef.current = socket;
-
-      socket.emit('join_game', gameId);
-
-      socket.on('previous_messages', (msgs: Message[]) => {
-        setMessages(msgs);
-        scrollToBottom();
-      });
-
-      socket.on('receive_message', (msg: Message) => {
-        setMessages((prev) => [...prev, msg]);
-        scrollToBottom();
-      });
-
-      socket.on('messages_cleaned', () => {
-        // Re-request messages from server to get the cleaned list
-        socket.emit('join_game', gameId);
-      });
-
-      return () => {
-        socket.emit('leave_game', gameId);
-        socket.disconnect();
-      };
-    } catch (err) {
-      console.error("Socket.IO connection failed:", err);
-    }
-  }, [gameId]);
-
-  // Local cleanup interval to keep UI fresh
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const fiveMinsAgo = Date.now() - 5 * 60 * 1000;
-      setMessages(prev => prev.filter(msg => new Date(msg.timestamp).getTime() > fiveMinsAgo));
-    }, 10000);
-    return () => clearInterval(interval);
-  }, []);
+    scrollToBottom();
+  }, [messages]);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -79,15 +22,9 @@ export const ChatRoom = ({ gameId }: ChatRoomProps) => {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || !socketRef.current || !user) return;
+    if (!inputText.trim()) return;
 
-    socketRef.current.emit('send_message', {
-      gameId,
-      userId: user.id,
-      username: user.username,
-      text: inputText.trim()
-    });
-
+    sendMessage(inputText.trim());
     setInputText('');
   };
 
@@ -96,7 +33,7 @@ export const ChatRoom = ({ gameId }: ChatRoomProps) => {
       {/* Chat Header */}
       <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
         <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
-          Live Game Chat
+          Live Global Chat
         </h3>
         <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
           <UserIcon className="w-4 h-4" />

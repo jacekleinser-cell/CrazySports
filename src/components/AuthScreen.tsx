@@ -5,14 +5,15 @@ import { cn } from '../lib/utils';
 
 export const AuthScreen = () => {
   const { login } = useAuth();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim()) {
-      setError('Username is required');
+    if (!email.trim() || !password.trim()) {
+      setError('Email and password are required');
       return;
     }
     
@@ -24,8 +25,8 @@ export const AuthScreen = () => {
       const fakeToken = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const user = {
         id: `user_${Date.now()}`,
-        username: username.trim(),
-        email: `${username.trim().toLowerCase().replace(/\s+/g, '')}@example.com`
+        username: email.split('@')[0],
+        email: email.trim().toLowerCase()
       };
       
       // Simulate network delay
@@ -47,7 +48,7 @@ export const AuthScreen = () => {
             Crazy<span className="text-emerald-500">Scores</span>
           </h1>
           <p className="text-slate-400 text-sm">
-            Choose a username to continue
+            Sign in to continue
           </p>
         </div>
         
@@ -60,28 +61,34 @@ export const AuthScreen = () => {
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Username</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <UserIcon className="h-5 w-5 text-slate-400" />
-                </div>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                  placeholder="Choose a username"
-                  required
-                />
-              </div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="block w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                placeholder="Enter your email"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="block w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                placeholder="Enter your password"
+                required
+              />
             </div>
 
             <button
               type="submit"
-              disabled={loading || !username.trim()}
+              disabled={loading || !email.trim() || !password.trim()}
               className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-70 disabled:cursor-not-allowed transition-colors mt-2"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Continue'}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sign In'}
               {!loading && <ArrowRight className="w-4 h-4" />}
             </button>
           </form>

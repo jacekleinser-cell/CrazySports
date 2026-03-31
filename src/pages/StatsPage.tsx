@@ -81,7 +81,6 @@ export const StatsPage = () => {
     { name: 'NFL', sport: 'football', league: 'nfl' },
     { name: 'MLB', sport: 'baseball', league: 'mlb' },
     { name: 'NHL', sport: 'hockey', league: 'nhl' },
-    { name: 'Premier League', sport: 'soccer', league: 'eng.1' },
   ];
 
   useEffect(() => {
@@ -94,7 +93,7 @@ export const StatsPage = () => {
     };
 
     fetchLeaders();
-    const interval = setInterval(fetchLeaders, 3000); // Poll every 3s
+    const interval = setInterval(fetchLeaders, 60000); // Poll every 60s
     return () => clearInterval(interval);
   }, [sport, league, selectedStatIndex, seasonType]);
 

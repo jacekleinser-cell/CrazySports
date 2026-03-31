@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSports } from '../context/SportsContext';
+import { useSports, Sport, League } from '../context/SportsContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { getStandings, Standing, StandingsGroup } from '../services/espn';
 import { cn } from '../lib/utils';
@@ -22,7 +22,7 @@ export const Standings = ({ sport, league }: { sport: Sport; league: League }) =
     };
 
     fetchStandings();
-    const interval = setInterval(fetchStandings, 3000); // Poll every 3s
+    const interval = setInterval(fetchStandings, 60000); // Poll every 60s
     return () => clearInterval(interval);
   }, [sport, league]);
 
@@ -83,7 +83,14 @@ export const Standings = ({ sport, league }: { sport: Sport; league: League }) =
           ? group.entries.filter(entry => isFavorite(entry.team?.id, league))
           : group.entries;
 
-        if (filteredEntries.length === 0 && showFavoritesOnly) return null;
+        // Sort entries by win percentage descending
+        const sortedEntries = [...filteredEntries].sort((a, b) => {
+          const aPct = parseFloat(getStat(a, 'winPercent')) || 0;
+          const bPct = parseFloat(getStat(b, 'winPercent')) || 0;
+          return bPct - aPct;
+        });
+
+        if (sortedEntries.length === 0 && showFavoritesOnly) return null;
 
         return (
           <div key={group.name} className="space-y-3">
@@ -111,7 +118,7 @@ export const Standings = ({ sport, league }: { sport: Sport; league: League }) =
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                    {filteredEntries.map((entry, idx) => (
+                    {sortedEntries.map((entry, idx) => (
                       <React.Fragment key={entry.team?.id || idx}>
                         <tr 
                           onClick={() => setSelectedTeam(selectedTeam === entry.team?.id ? null : entry.team?.id)}

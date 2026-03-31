@@ -717,7 +717,7 @@ export const GameDetailsPage = () => {
       </div>
       ) : (
         <div className="w-full max-w-3xl mx-auto">
-          <ChatRoom gameId={id || ''} />
+          <ChatRoom />
         </div>
       )}
     </div>
